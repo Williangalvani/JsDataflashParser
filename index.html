@@ -1,0 +1,50 @@
+<input id="fileItem" type="file">
+
+<script>
+    // We use a worker because it is asynchronous, which means the ui doesn't freeze while parsing
+    const worker = new Worker('parser.js');
+
+    // output messages from worker
+    worker.onmessage = (event) => {
+        if (event.data.hasOwnProperty('percentage')) {
+            console.log(`percentage: ${event.data.percentage}`)
+        } else if (event.data.hasOwnProperty('availableMessages')) {
+            console.log('Available message types:')
+            console.log(event.data.availableMessages)
+        } else if (event.data.hasOwnProperty('metadata')) {
+            console.log('got metadata:')
+            console.log(event.data.metadata)
+        } else if (event.data.hasOwnProperty('messages')) {
+            console.log('got messages')
+            console.log(event.data.messages)
+        } else if (event.data.hasOwnProperty('messageType')) {
+            console.log(`got list of ${event.data.messageType}:`)
+            console.log(event.data.messageList)
+        } else if (event.data.hasOwnProperty('files')) {
+            console.log('got files:')
+            console.log(event.data.files)
+        } else if (event.data.hasOwnProperty('messagesDoneLoading')) {
+            console.log('messages finished loading')
+        }
+    }
+
+
+    // File input
+    const readFile = e => {
+        const file = e.target.files[0]
+        let reader = new FileReader()
+        reader.onload = function (e) {
+            let arrayBuffer = new Uint8Array(reader.result)
+            console.log(arrayBuffer)
+            let data = reader.result
+            worker.postMessage({
+                action: 'parse',
+                file: data,
+            })
+        }
+
+        reader.readAsArrayBuffer(file)
+    // end of file input
+    }
+    document.querySelector("#fileItem").onchange = readFile
+</script>
