@@ -411,7 +411,7 @@ class DataflashParser {
 
     messageHasInstances (name) {
         let type = this.FMT.find(msg => msg !== undefined && msg.Name === name)
-        return type !== undefined && type.units !== undefined && type.units.indexOf('instance') !== -1
+        return type !== undefined && type.units !== undefined && type.units.includes('instance')
     }
 
     getInstancesFieldName (name) {
@@ -525,7 +525,7 @@ class DataflashParser {
                         }
                         // we do an early return after we get 20 repeated instance numbers. should we?
                         const instance = msg[instanceField]
-                        if (availableInstances.indexOf(instance) !== -1) {
+                        if (availableInstances.includes(instance)) {
                             repeats += 1
                             if (repeats > 20) {
                                 return availableInstances
@@ -645,7 +645,7 @@ class DataflashParser {
     }
 
     fixDataOnce (name) {
-        if (['GPS', 'ATT', 'AHR2', 'MODE'].indexOf(name) === -1) {
+        if (!['GPS', 'ATT', 'AHR2', 'MODE'].includes(name)) {
             if (this.messageTypes.hasOwnProperty(name)) {
                 let fields = this.messages[name][0].fieldnames
                 if (this.messageTypes[name].hasOwnProperty('multipliers')) {
@@ -659,8 +659,6 @@ class DataflashParser {
                     }
                 }
             }
-        } else {
-            // console.log('skipping ' + name)
         }
     }
 
@@ -700,7 +698,7 @@ class DataflashParser {
         if (name === 'FILE') {
             return
         }
-        if (['FMTU'].indexOf(name) === -1) {
+        if (!['FMTU'].includes(name)) {
             if (this.messageTypes.hasOwnProperty(name)) {
                 let fields = this.messageTypes[name].expressions
                 if (!fields.includes('time_boot_ms')) {
