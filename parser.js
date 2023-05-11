@@ -269,6 +269,13 @@ class DataflashParser {
         for (let i = 0; i < obj.Format.length; i++) {
             temp = obj.Format.charAt(i)
             switch (temp) {
+            case 'a': // int16_t[32]
+                dict[column[i]] = []
+                for (let j = 0; j < 32; j++) {
+                    dict[column[i]][j] = this.data.getInt16(this.offset, true)
+                    this.offset += 2
+                }
+                break
             case 'b':
                 dict[column[i]] = this.data.getInt8(this.offset)
                 this.offset += 1
