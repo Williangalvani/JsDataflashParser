@@ -884,3 +884,5 @@ self.addEventListener('message', function (event) {
         parser.trimFile(event.data.time)
     }
 })
+
+export default DataflashParser
