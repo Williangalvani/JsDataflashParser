@@ -1,41 +1,50 @@
 /* eslint-disable no-unused-vars */
 /* eslint-disable no-var */
 /* eslint-disable no-prototype-builtins */
-const MAV_TYPE_GENERIC = 0 // Generic micro air vehicle.
-const MAV_TYPE_FIXED_WING = 1 // Fixed wing aircraft.
-const MAV_TYPE_QUADROTOR = 2 // Quadrotor
-const MAV_TYPE_COAXIAL = 3 // Coaxial helicopter
-const MAV_TYPE_HELICOPTER = 4 // Normal helicopter with tail rotor.
-const MAV_TYPE_ANTENNA_TRACKER = 5 // Ground installation
-const MAV_TYPE_GCS = 6 // Operator control unit / ground control station
-const MAV_TYPE_AIRSHIP = 7 // Airship, controlled
-const MAV_TYPE_FREE_BALLOON = 8 // Free balloon, uncontrolled
-const MAV_TYPE_ROCKET = 9 // Rocket
-const MAV_TYPE_GROUND_ROVER = 10 // Ground rover
-const MAV_TYPE_SURFACE_BOAT = 11 // Surface vessel, boat, ship
-const MAV_TYPE_SUBMARINE = 12 // Submarine
-const MAV_TYPE_HEXAROTOR = 13 // Hexarotor
-const MAV_TYPE_OCTOROTOR = 14 // Octorotor
-const MAV_TYPE_TRICOPTER = 15 // Tricopter
-const MAV_TYPE_FLAPPING_WING = 16 // Flapping wing
-const MAV_TYPE_KITE = 17 // Kite
-const MAV_TYPE_ONBOARD_CONTROLLER = 18 // Onboard companion controller
-const MAV_TYPE_VTOL_DUOROTOR = 19 // Two-rotor VTOL using control surfaces in vertical operation in addition. Tailsitter
-const MAV_TYPE_VTOL_QUADROTOR = 20 // Quad-rotor VTOL using a V-shaped quad config in vertical operation.
+/* global self, DataView, ArrayBuffer */
+/*
+ * modifications towards FlightCoach application are commented below
+ * Artur Uzieblo, June 2023
+ */
+
+const MAV_TYPE_GENERIC = 0; // Generic micro air vehicle.
+const MAV_TYPE_FIXED_WING = 1; // Fixed wing aircraft.
+const MAV_TYPE_QUADROTOR = 2; // Quadrotor
+const MAV_TYPE_COAXIAL = 3; // Coaxial helicopter
+const MAV_TYPE_HELICOPTER = 4; // Normal helicopter with tail rotor.
+const MAV_TYPE_ANTENNA_TRACKER = 5; // Ground installation
+const MAV_TYPE_GCS = 6; // Operator control unit / ground control station
+const MAV_TYPE_AIRSHIP = 7; // Airship, controlled
+const MAV_TYPE_FREE_BALLOON = 8; // Free balloon, uncontrolled
+const MAV_TYPE_ROCKET = 9; // Rocket
+const MAV_TYPE_GROUND_ROVER = 10; // Ground rover
+const MAV_TYPE_SURFACE_BOAT = 11; // Surface vessel, boat, ship
+const MAV_TYPE_SUBMARINE = 12; // Submarine
+const MAV_TYPE_HEXAROTOR = 13; // Hexarotor
+const MAV_TYPE_OCTOROTOR = 14; // Octorotor
+const MAV_TYPE_TRICOPTER = 15; // Tricopter
+const MAV_TYPE_FLAPPING_WING = 16; // Flapping wing
+const MAV_TYPE_KITE = 17; // Kite
+const MAV_TYPE_ONBOARD_CONTROLLER = 18; // Onboard companion controller
+const MAV_TYPE_VTOL_DUOROTOR = 19; // Two-rotor VTOL using control surfaces in vertical operation in addition. Tailsitter
+const MAV_TYPE_VTOL_QUADROTOR = 20; // Quad-rotor VTOL using a V-shaped quad config in vertical operation.
 // Tailsitter.
-const MAV_TYPE_VTOL_TILTROTOR = 21 // Tiltrotor VTOL
-const MAV_TYPE_VTOL_RESERVED2 = 22 // VTOL reserved 2
-const MAV_TYPE_VTOL_RESERVED3 = 23 // VTOL reserved 3
-const MAV_TYPE_VTOL_RESERVED4 = 24 // VTOL reserved 4
-const MAV_TYPE_VTOL_RESERVED5 = 25 // VTOL reserved 5
-const MAV_TYPE_GIMBAL = 26 // Onboard gimbal
-const MAV_TYPE_ADSB = 27 // Onboard ADSB peripheral
-const MAV_TYPE_PARAFOIL = 28 // Steerable, nonrigid airfoil
-const MAV_TYPE_DODECAROTOR = 29 // Dodecarotor
-const MAV_TYPE_CAMERA = 30 // Camera
-const MAV_TYPE_CHARGING_STATION = 31 // Charging station
-const MAV_TYPE_FLARM = 32 // Onboard FLARM collision avoidance system
-const MAV_TYPE_ENUM_END = 33 //
+const MAV_TYPE_VTOL_TILTROTOR = 21; // Tiltrotor VTOL
+const MAV_TYPE_VTOL_RESERVED2 = 22; // VTOL reserved 2
+const MAV_TYPE_VTOL_RESERVED3 = 23; // VTOL reserved 3
+const MAV_TYPE_VTOL_RESERVED4 = 24; // VTOL reserved 4
+const MAV_TYPE_VTOL_RESERVED5 = 25; // VTOL reserved 5
+const MAV_TYPE_GIMBAL = 26; // Onboard gimbal
+const MAV_TYPE_ADSB = 27; // Onboard ADSB peripheral
+const MAV_TYPE_PARAFOIL = 28; // Steerable, nonrigid airfoil
+const MAV_TYPE_DODECAROTOR = 29; // Dodecarotor
+const MAV_TYPE_CAMERA = 30; // Camera
+const MAV_TYPE_CHARGING_STATION = 31; // Charging station
+const MAV_TYPE_FLARM = 32; // Onboard FLARM collision avoidance system
+const MAV_TYPE_ENUM_END = 33; //
+
+// FC
+const DEBUG = false;
 
 const modeMappingApm = {
     0: 'MANUAL',
@@ -62,7 +71,7 @@ const modeMappingApm = {
     22: 'QAUTOTUNE',
     23: 'QACRO',
     24: 'THERMAL'
-}
+};
 const modeMappingAcm = {
     0: 'STABILIZE',
     1: 'ACRO',
@@ -88,7 +97,7 @@ const modeMappingAcm = {
     24: 'ZIGZAG',
     25: 'SYSTEMID',
     26: 'AUTOROTATE'
-}
+};
 const modeMappingRover = {
     0: 'MANUAL',
     1: 'ACRO',
@@ -102,7 +111,7 @@ const modeMappingRover = {
     12: 'SMART_RTL',
     15: 'GUIDED',
     16: 'INITIALISING'
-}
+};
 const modeMappingTracker = {
     0: 'MANUAL',
     1: 'STOP',
@@ -110,7 +119,7 @@ const modeMappingTracker = {
     3: 'SERVO_TEST',
     10: 'AUTO',
     16: 'INITIALISING'
-}
+};
 const modeMappingSub = {
     0: 'STABILIZE',
     1: 'ACRO',
@@ -122,7 +131,7 @@ const modeMappingSub = {
     16: 'POSHOLD',
     19: 'MANUAL',
     20: 'MOTOR_DETECT'
-}
+};
 
 const multipliers = {
     '-': 0, // no multiplier e.g. a string
@@ -141,16 +150,16 @@ const multipliers = {
     // <leave a gap here, just in case....>
     '!': 3.6, // (ampere*second => milliampere*hour) and (km/h => m/s)
     '/': 3600 // (ampere*second => ampere*hour)
-}
+};
 
 const multipliersTable = {
     0.000001: 'n',
     1000: 'M',
     0.001: 'm'
-}
+};
 
-const HEAD1 = 163
-const HEAD2 = 149
+const HEAD1 = 163;
+const HEAD2 = 149;
 
 const units = {
     '-': '', // no units e.g. Pi, or a string
@@ -186,413 +195,434 @@ const units = {
     Y: 'us', // pulse width modulation in microseconds
     z: 'Hz', // Hertz
     '#': 'instance' // instance number for message
-}
+};
 
 function getModeMap (mavType) {
-    let map
+    let map;
     if ([MAV_TYPE_QUADROTOR,
         MAV_TYPE_HELICOPTER,
         MAV_TYPE_HEXAROTOR,
         MAV_TYPE_OCTOROTOR,
         MAV_TYPE_COAXIAL,
         MAV_TYPE_TRICOPTER].includes(mavType)) {
-        map = modeMappingAcm
+        map = modeMappingAcm;
     }
     if (mavType === MAV_TYPE_FIXED_WING) {
-        map = modeMappingApm
+        map = modeMappingApm;
     }
     if (mavType === MAV_TYPE_GROUND_ROVER) {
-        map = modeMappingRover
+        map = modeMappingRover;
     }
     if (mavType === MAV_TYPE_ANTENNA_TRACKER) {
-        map = modeMappingTracker
+        map = modeMappingTracker;
     }
     if (mavType === MAV_TYPE_SUBMARINE) {
-        map = modeMappingSub
+        map = modeMappingSub;
     }
-    if (map == null) {
-        return null
+    if (map === null) {
+        return null;
     }
-    return map
+    return map;
 }
 
 function assignColumn (obj) {
-    const ArrayOfString = obj.split(',')
-    return ArrayOfString
+    const ArrayOfString = obj.split(',');
+    return ArrayOfString;
 }
 
 // Converts from degrees to radians.
 Math.radians = function (degrees) {
-    return degrees * Math.PI / 180
-}
+    return degrees * Math.PI / 180;
+};
 
 // Converts from radians to degrees.
 Math.degrees = function (radians) {
-    return radians * 180 / Math.PI
-}
+    return radians * 180 / Math.PI;
+};
 
-class DataflashParser {
+class DataFlashParser {
     constructor () {
-        this.time = null
-        this.timebase = null
-        this.buffer = null
-        this.data = null
-        this.FMT = []
+        this.time = null;
+        this.timebase = null;
+        this.buffer = null;
+        this.data = null;
+        this.FMT = [];
         this.FMT[128] = {
             Type: '128',
             length: '89',
             Name: 'FMT',
             Format: 'BBnNZ',
             Columns: 'Type,Length,Name,Format,Columns'
-        }
-        this.offset = 0
-        this.msgType = []
-        this.offsetArray = []
-        this.totalSize = null
-        this.messages = {}
-        this.lastPercentage = 0
-        this.sent = false
-        this.maxPercentageInterval = 0.05
-        this.messageTypes = {}
-        this.alreadyParsed = []
+        };
+        this.offset = 0;
+        this.msgType = [];
+        this.offsetArray = [];
+        this.totalSize = null;
+        this.messages = {};
+        this.lastPercentage = 0;
+        this.sent = false;
+        this.maxPercentageInterval = 0.05;
+        this.messageTypes = {};
+        this.alreadyParsed = [];
+        this.parsed = [];
     }
 
     FORMAT_TO_STRUCT (obj) {
-        let temp
+        let temp;
         const dict = {
             name: obj.Name,
             fieldnames: obj.Columns.split(',')
-        }
+        };
 
-        const column = assignColumn(obj.Columns)
-        let low
-        let n
+        const column = assignColumn(obj.Columns);
+        let low;
+        let n;
         for (let i = 0; i < obj.Format.length; i++) {
-            temp = obj.Format.charAt(i)
+            temp = obj.Format.charAt(i);
             switch (temp) {
             case 'a': // int16_t[32]
-                dict[column[i]] = []
+                dict[column[i]] = [];
                 for (let j = 0; j < 32; j++) {
-                    dict[column[i]][j] = this.data.getInt16(this.offset, true)
-                    this.offset += 2
+                    dict[column[i]][j] = this.data.getInt16(this.offset, true);
+                    this.offset += 2;
                 }
-                break
+                break;
             case 'b':
-                dict[column[i]] = this.data.getInt8(this.offset)
-                this.offset += 1
-                break
+                dict[column[i]] = this.data.getInt8(this.offset);
+                this.offset += 1;
+                break;
             case 'B':
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
+                dict[column[i]] = this.data.getUint8(this.offset);
+                this.offset += 1;
+                break;
             case 'h':
-                dict[column[i]] = this.data.getInt16(this.offset, true)
-                this.offset += 2
+                dict[column[i]] = this.data.getInt16(this.offset, true);
+                this.offset += 2;
                 break
             case 'H':
-                dict[column[i]] = this.data.getUint16(this.offset, true)
-                this.offset += 2
+                dict[column[i]] = this.data.getUint16(this.offset, true);
+                this.offset += 2;
                 break
             case 'i':
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
+                dict[column[i]] = this.data.getInt32(this.offset, true);
+                this.offset += 4;
                 break
             case 'I':
-                dict[column[i]] = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                break
+                dict[column[i]] = this.data.getUint32(this.offset, true);
+                this.offset += 4;
+                break;;;;
             case 'f':
-                dict[column[i]] = this.data.getFloat32(this.offset, true)
-                this.offset += 4
-                break
+                dict[column[i]] = this.data.getFloat32(this.offset, true);
+                this.offset += 4;;
+                break;
             case 'd':
-                dict[column[i]] = this.data.getFloat64(this.offset, true)
-                this.offset += 8
-                break
+                dict[column[i]] = this.data.getFloat64(this.offset, true);
+                this.offset += 8;
+                break;
             case 'Q':
-                low = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                n = this.data.getUint32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
+                low = this.data.getUint32(this.offset, true);
+                this.offset += 4;
+                n = this.data.getUint32(this.offset, true) * 4294967296.0 + low;
+                if (low < 0) n += 4294967296;
+                dict[column[i]] = n;
+                this.offset += 4;
+                break;
             case 'q':
-                low = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                n = this.data.getInt32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
+                low = this.data.getInt32(this.offset, true);
+                this.offset += 4;
+                n = this.data.getInt32(this.offset, true) * 4294967296.0 + low;
+                if (low < 0) n += 4294967296;
+                dict[column[i]] = n;
+                this.offset += 4;
+                break;
             case 'n':
                 // TODO: fix these regex and unsilent linter
                 // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '')
-                this.offset += 4
-                break
+                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '');
+                this.offset += 4;
+                break;
             case 'N':
                 // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '')
-                this.offset += 16
-                break
+                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '');
+                this.offset += 16;
+                break;
             case 'Z':
                 // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '')
-                this.offset += 64
-                break
+                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '');
+                this.offset += 64;
+                break;
             case 'c':
                 // this.this.data.setInt16(offset,true);
-                dict[column[i]] = this.data.getInt16(this.offset, true) / 100
-                this.offset += 2
-                break
+                dict[column[i]] = this.data.getInt16(this.offset, true) / 100;
+                this.offset += 2;
+                break;
             case 'C':
                 // this.data.setUint16(offset,true);
-                dict[column[i]] = this.data.getUint16(this.offset, true) / 100
-                this.offset += 2
-                break
+                dict[column[i]] = this.data.getUint16(this.offset, true) / 100;
+                this.offset += 2;
+                break;
             case 'E':
                 // this.data.setUint32(offset,true);
-                dict[column[i]] = this.data.getUint32(this.offset, true) / 100
-                this.offset += 4
-                break
+                dict[column[i]] = this.data.getUint32(this.offset, true) / 100;
+                this.offset += 4;
+                break;
             case 'e':
                 // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true) / 100
-                this.offset += 4
-                break
+                dict[column[i]] = this.data.getInt32(this.offset, true) / 100;
+                this.offset += 4;
+                break;
             case 'L':
                 // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                break
+                dict[column[i]] = this.data.getInt32(this.offset, true);
+                this.offset += 4;
+                break;
             case 'M':
                 // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
+                dict[column[i]] = this.data.getUint8(this.offset);
+                this.offset += 1;
+                break;
             }
         }
-        return dict
+        return dict;
     }
 
     gpstimetoTime (week, msec) {
-        const epoch = 86400 * (10 * 365 + (1980 - 1969) / 4 + 1 + 6 - 2)
-        return epoch + 86400 * 7 * week + msec * 0.001 - 15
+        const epoch = 86400 * (10 * 365 + (1980 - 1969) / 4 + 1 + 6 - 2);
+        return epoch + 86400 * 7 * week + msec * 0.001 - 15;
     }
 
     setTimeBase (base) {
-        this.timebase = base
+        this.timebase = base;
     }
 
     findTimeBase (gps) {
-        const temp = this.gpstimetoTime(parseInt(gps.GWk), parseInt(gps.GMS))
-        this.setTimeBase(parseInt(temp - gps.TimeUS * 0.000001))
+        const temp = this.gpstimetoTime(parseInt(gps.GWk), parseInt(gps.GMS));
+        this.setTimeBase(parseInt(temp - gps.TimeUS * 0.000001));
     }
 
     getMsgType (element) {
         for (let i = 0; i < this.FMT.length; i++) {
-            if (this.FMT[i] != null) {
+            if (this.FMT[i] !== undefined) { // FC
                 // eslint-disable-next-line
-                if (this.FMT[i].Name == element) {
-                    return i
+                if (this.FMT[i].Name === element) {
+                    return i;
                 }
             }
         }
+        return -1; // FC
     }
 
     onMessage (message) {
-        if (this.totalSize == null) { // for percentage calculation
-            this.totalSize = this.buffer.byteLength
+        if (this.totalSize === null) { // for percentage calculation
+            this.totalSize = this.buffer.byteLength;
         }
         if (message.name in this.messages) {
-            this.messages[message.name].push(this.fixData(message))
+            this.messages[message.name].push(this.fixData(message));
         } else {
-            this.messages[message.name] = [this.fixData(message)]
+            this.messages[message.name] = [this.fixData(message)];
         }
-        const percentage = 100 * this.offset / this.totalSize
+        const percentage = 100 * this.offset / this.totalSize;
         if ((percentage - this.lastPercentage) > this.maxPercentageInterval) {
-            self.postMessage({ percentage: percentage })
-            this.lastPercentage = percentage
+            self.postMessage({ percentage: percentage });
+            this.lastPercentage = percentage;
         }
     }
 
     messageHasInstances (name) {
-        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name)
-        return type !== undefined && type.units !== undefined && type.units.includes('instance')
+        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name);
+        return type !== undefined && type.units !== undefined && type.units.includes('instance');
     }
 
     getInstancesFieldName (name) {
-        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name)
+        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name);
         if (type.units === undefined) {
-            return null
+            return null;
         }
-        return type.Columns.split(',')[type.units.indexOf('instance')]
+        return type.Columns.split(',')[type.units.indexOf('instance')];
     }
 
     // Next three functions are used for transfering data on postmessage, instead of cloning
     isTypedArray (arr) {
-        return ArrayBuffer.isView(arr) && !(arr instanceof DataView)
+        return ArrayBuffer.isView(arr) && !(arr instanceof DataView);
     }
 
     getType (arr) {
-        return this.isTypedArray(arr) && arr.constructor.name
+        return this.isTypedArray(arr) && arr.constructor.name;
     }
 
     postData (data) {
-        data.dataType = {}
-        const transferables = []
+        data.dataType = {};
+        const transferables = [];
         for (const field of Object.keys(data.messageList)) {
-            const arrayType = this.getType(data.messageList[field])
+            const arrayType = this.getType(data.messageList[field]);
             if (arrayType) {
-                transferables.push(data.messageList[field].buffer)
+                transferables.push(data.messageList[field].buffer);
             }
             // Apparently it is magically decoded on the other end, no need for metadata
             // data['dataType'][field] = arrayType
         }
-        self.postMessage(data, transferables)
+        self.postMessage(data, transferables);
     }
 
-    parseAtOffset (name) {
-        const type = this.getMsgType(name)
-        const parsed = []
+// FC, parseAtOffset was split into two parts
+    parseAtOffset1 (name, remove = []) {
+        // returns the object of the arrays
+        this.parsed = []; // FC
+        const type = this.getMsgType(name);
+        if (type === -1)    return undefined;
         for (let i = 0; i < this.msgType.length; i++) {
             if (type === this.msgType[i]) {
-                this.offset = this.offsetArray[i]
+                this.offset = this.offsetArray[i];
                 try {
-                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]])
-                    if (temp.name != null) {
-                        parsed.push(this.fixData(temp))
+                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]]);
+                    if (temp.name !== undefined) { // FC
+                        this.parsed.push(this.fixData(temp, remove));
                     }
                 } catch (e) {
-                    console.log('reached log end?')
-                    console.log(e)
+                    // FC
+                    if(DEBUG) console.log('reached log end?');
+                    if(DEBUG) console.log(e);
                 }
             }
             if (i % 100000 === 0) {
-                const perc = 100 * i / this.msgType.length
-                self.postMessage({ percentage: perc })
+                const perc = 100 * i / this.msgType.length;
+                self.postMessage({ percentage: perc });
             }
         }
-        delete this.messages[name]
-        this.messages[name] = parsed
+        delete this.messages[name];
+        this.messages[name] = this.parsed; // FC
+        self.postMessage({ percentage: 100 });
+        if(DEBUG) console.log(name, this.messageHasInstances(name) ? 'has instances' : 'has no instances'); // FC
+    }
 
-        self.postMessage({ percentage: 100 })
-        console.log(name, this.messageHasInstances(name) ? 'has instances' : 'has no instances')
-        if (parsed.length && this.messageHasInstances(name)) {
-            const instanceField = this.getInstancesFieldName(name)
-            const instances = {}
-            for (const msg of parsed) {
+// FC
+    parseAtOffset (name, remove = []) {
+        this.parseAtOffset1(name, remove); // FC
+        // convert arrays to objects
+        if (this.parsed.length && this.messageHasInstances(name)) {
+            const instanceField = this.getInstancesFieldName(name);
+            const instances = {};
+            for (const msg of this.parsed) {
                 try {
-                    instances[msg[instanceField]].push(msg)
+                    instances[msg[instanceField]].push(msg);
                 } catch (e) {
-                    instances[msg[instanceField]] = [msg]
+                    instances[msg[instanceField]] = [msg];
                 }
             }
             if (Object.keys(instances).length === 1) {
-                this.fixDataOnce(name)
-                this.simplifyData(name)
-                this.postData({ messageType: name, messageList: this.messages[name] })
-                return parsed
+                this.fixDataOnce(name);
+                this.simplifyData(name);
+                this.postData({ messageType: name, messageList: this.messages[name] });
+                return this.parsed;
             }
             for (const [index, messages] of Object.entries(instances)) {
-                const newName = name + '[' + index + ']'
-                this.messages[newName] = messages
-                this.fixDataOnce(newName)
-                this.simplifyData(newName)
+                const newName = name + '[' + index + ']';
+                this.messages[newName] = messages;
+                this.fixDataOnce(newName);
+                this.simplifyData(newName);
                 this.postData({
                     messageType: newName,
                     messageList: this.messages[newName]
-                })
+                });
             }
-        } else if (parsed.length) {
-            this.fixDataOnce(name)
-            this.simplifyData(name)
-            this.postData({ messageType: name, messageList: this.messages[name] })
+        } else if (this.parsed.length) {
+            this.fixDataOnce(name);
+            this.simplifyData(name);
+            this.postData({ messageType: name, messageList: this.messages[name] });
         }
-        this.alreadyParsed.push(name)
-        return parsed
+        this.alreadyParsed.push(name);
+        return this.parsed; // FC
+
+    }
+    
+// FC, new function that provides different data strcutures required by FC
+    parseAtOffsetArrObj (name, remove = []) {
+        // returns the array of objects
+        this.parseAtOffset1(name, remove);
+        this.alreadyParsed.push(name);
+        return this.parsed;
     }
 
     checkNumberOfInstances (name) {
         // Similar to parseOffset, but finishes earlier and updates messageTypes
-        const type = this.getMsgType(name)
-        const availableInstances = []
-        const instanceField = this.getInstancesFieldName(name)
+        const type = this.getMsgType(name);
+        const availableInstances = [];
+        const instanceField = this.getInstancesFieldName(name);
         if (instanceField === null) {
-            return [1]
+            return [1];
         }
-        let repeats = 0
+        let repeats = 0;
         for (let i = 0; i < this.msgType.length; i++) {
             if (type === this.msgType[i]) {
-                this.offset = this.offsetArray[i]
+                this.offset = this.offsetArray[i];
                 try {
-                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]])
-                    if (temp.name != null) {
-                        const msg = temp
+                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]]);
+                    if (temp.name !== null) {
+                        const msg = temp;
                         if (!msg.hasOwnProperty(instanceField)) {
                             break
                         }
                         // we do an early return after we get 20 repeated instance numbers. should we?
-                        const instance = msg[instanceField]
+                        const instance = msg[instanceField];
                         if (availableInstances.includes(instance)) {
-                            repeats += 1
+                            repeats += 1;
                             if (repeats > 20) {
-                                return availableInstances
+                                return availableInstances;
                             }
                         } else {
-                            availableInstances.push(instance)
+                            availableInstances.push(instance);
                         }
                     }
                 } catch (e) {
-                    console.log(e)
+                    if(DEBUG) console.log(e); // FC
                 }
             }
         }
-        return availableInstances
+        return availableInstances;
     }
 
     timestamp (TimeUs) {
-        const temp = this.timebase + TimeUs * 0.000001
+        const temp = this.timebase + TimeUs * 0.000001;
         if (temp > 0) {
-            TimeUs = temp
+            TimeUs = temp;
         }
-        let date = new Date(TimeUs * 1000)
-        const hours = date.getHours()
-        const minutes = '0' + date.getMinutes()
-        const seconds = '0' + date.getSeconds()
-        const formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2)
-        date = date.toString()
-        const time = date.split(' ')
+        let date = new Date(TimeUs * 1000);
+        const hours = date.getHours();
+        const minutes = '0' + date.getMinutes();
+        const seconds = '0' + date.getSeconds();
+        const formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+        date = date.toString();
+        const time = date.split(' ');
         if (time[0] !== 'Invalid') {
-            this.time = time[0] + ' ' + time[1] + ' ' + time[2] + ' ' + time[3]
+            this.time = time[0] + ' ' + time[1] + ' ' + time[2] + ' ' + time[3];
         }
-        return formattedTime
+        return formattedTime;
     }
 
     DfReader () {
-        let lastOffset = 0
+        let lastOffset = 0;
         while (this.offset < (this.buffer.byteLength - 3)) {
             if (this.data.getUint8(this.offset) !== HEAD1 || this.data.getUint8(this.offset + 1) !== HEAD2) {
-                this.offset += 1
+                this.offset += 1;
                 continue
             }
-            this.offset += 2
+            this.offset += 2;
 
-            const attribute = this.data.getUint8(this.offset)
-            if (this.FMT[attribute] != null) {
-                this.offset += 1
-                this.offsetArray.push(this.offset)
-                this.msgType.push(attribute)
+            const attribute = this.data.getUint8(this.offset);
+            if (this.FMT[attribute] !== null) {
+                this.offset += 1;
+                this.offsetArray.push(this.offset);
+                this.msgType.push(attribute);
                 try {
-                    var value = this.FORMAT_TO_STRUCT(this.FMT[attribute])
+                    var value = this.FORMAT_TO_STRUCT(this.FMT[attribute]);
                     if (this.FMT[attribute].Name === 'GPS') {
-                        this.findTimeBase(value)
+                        this.findTimeBase(value);
                     }
                 } catch (e) {
-                    // console.log('reached log end?')
-                    // console.log(e)
-                    this.offset += 1
+                    // FC
+                    if(DEBUG) console.log('reached log end?');
+                    if(DEBUG) console.log(e);
+                    this.offset += 1;
                 }
                 if (attribute === 128) {
                     this.FMT[value.Type] = {
@@ -601,69 +631,71 @@ class DataflashParser {
                         Name: value.Name,
                         Format: value.Format,
                         Columns: value.Columns
-                    }
+                    };
                 }
                 // this.onMessage(value)
             } else {
-                this.offset += 1
+                this.offset += 1;
             }
             if (this.offset - lastOffset > 50000) {
-                const perc = 100 * this.offset / this.buffer.byteLength
-                self.postMessage({ percentage: perc })
-                lastOffset = this.offset
+                const perc = 100 * this.offset / this.buffer.byteLength;
+                self.postMessage({ percentage: perc });
+                lastOffset = this.offset;
             }
         }
-        self.postMessage({ percentage: 100 })
-        self.postMessage({ messages: this.messages })
-        this.sent = true
+        self.postMessage({ percentage: 100 });
+        self.postMessage({ messages: this.messages });
+        this.sent = true;
     }
 
     getModeString (cmode) {
-        let mavtype
-        const msgs = this.messages.MSG
+        let mavtype;
+        const msgs = this.messages.MSG;
         for (const i in msgs.Message) {
             if (msgs.Message[i].toLowerCase().includes('arduplane')) {
-                mavtype = MAV_TYPE_FIXED_WING
-                return getModeMap(mavtype)[cmode]
+                mavtype = MAV_TYPE_FIXED_WING;
+                return getModeMap(mavtype)[cmode];
             } else if (msgs.Message[i].toLowerCase().includes('arducopter')) {
-                mavtype = MAV_TYPE_QUADROTOR
-                return getModeMap(mavtype)[cmode]
+                mavtype = MAV_TYPE_QUADROTOR;
+                return getModeMap(mavtype)[cmode];
             } else if (msgs.Message[i].toLowerCase().includes('ardusub')) {
-                mavtype = MAV_TYPE_SUBMARINE
-                return getModeMap(mavtype)[cmode]
+                mavtype = MAV_TYPE_SUBMARINE;
+                return getModeMap(mavtype)[cmode];
             } else if (msgs.Message[i].toLowerCase().includes('rover')) {
-                mavtype = MAV_TYPE_GROUND_ROVER
-                return getModeMap(mavtype)[cmode]
+                mavtype = MAV_TYPE_GROUND_ROVER;
+                return getModeMap(mavtype)[cmode];
             } else if (msgs.Message[i].toLowerCase().includes('tracker')) {
-                mavtype = MAV_TYPE_ANTENNA_TRACKER
-                return getModeMap(mavtype)[cmode]
+                mavtype = MAV_TYPE_ANTENNA_TRACKER;
+                return getModeMap(mavtype)[cmode];
             }
         }
-        console.log('defaulting to quadcopter')
-        return getModeMap(MAV_TYPE_QUADROTOR)[cmode]
+        if(DEBUG) console.log('defaulting to quadcopter'); // FC
+        return getModeMap(MAV_TYPE_QUADROTOR)[cmode];
     }
 
-    fixData (message) {
+// FC, added another parameter used to request some data removal from structures
+    fixData (message, remove = []) {
         if (message.name === 'MODE') {
-            message.asText = this.getModeString(message.Mode)
+            message.asText = this.getModeString(message.Mode);
         }
         // eslint-disable-next-line
-        message.time_boot_ms = message.TimeUS / 1000
-        delete message.TimeUS
-        delete message.fieldnames
-        return message
+        message.time_boot_ms = message.TimeUS / 1000;
+        delete message.TimeUS;
+        delete message.fieldnames;
+        remove.map( r => {delete message[r];} ); // FC
+        return message;
     }
 
     fixDataOnce (name) {
         if (!['GPS', 'ATT', 'AHR2', 'MODE'].includes(name)) {
             if (this.messageTypes.hasOwnProperty(name)) {
-                const fields = this.messages[name][0].fieldnames
+                const fields = this.messages[name][0].fieldnames;
                 if (this.messageTypes[name].hasOwnProperty('multipliers')) {
                     for (const message in this.messages[name]) {
                         for (let i = 1; i < fields.length; i++) {
-                            const fieldname = fields[i]
+                            const fieldname = fields[i];
                             if (!isNaN(this.messageTypes[name].multipliers[i])) {
-                                this.messages[name][message][fieldname] *= this.messageTypes[name].multipliers[i]
+                                this.messages[name][message][fieldname] *= this.messageTypes[name].multipliers[i];
                             }
                         }
                     }
@@ -673,64 +705,64 @@ class DataflashParser {
     }
 
     concatTypedArrays (a, b) { // a, b TypedArray of same type
-        const c = new (a.constructor)(a.length + b.length)
-        c.set(a, 0)
-        c.set(b, a.length)
-        return c
+        const c = new (a.constructor)(a.length + b.length);
+        c.set(a, 0);
+        c.set(b, a.length);
+        return c;
     }
 
     createUint8ArrayFromString (str) {
-        const array = new Uint8Array(str.length)
+        const array = new Uint8Array(str.length);
         for (let i = 0, strLen = str.length; i < strLen; i++) {
-            array[i] = str.charCodeAt(i)
+            array[i] = str.charCodeAt(i);
         }
-        return array
+        return array;
     }
 
     processFiles () {
-        this.files = {}
+        this.files = {};
         for (const msg of this.messages.FILE) {
             if (!this.files.hasOwnProperty(msg.FileName)) {
-                this.files[msg.FileName] = this.createUint8ArrayFromString(msg.Data)
+                this.files[msg.FileName] = this.createUint8ArrayFromString(msg.Data);
             } else {
                 this.files[msg.FileName] = this.concatTypedArrays(
                     this.files[msg.FileName], this.createUint8ArrayFromString(msg.Data)
-                )
+                );
             }
         }
-        self.postMessage({ files: this.files })
+        self.postMessage({ files: this.files });
     }
 
     simplifyData (name) {
         if (name === 'MODE') {
-            this.messageTypes[name].expressions.push('asText')
+            this.messageTypes[name].expressions.push('asText');
         }
         if (name === 'FILE') {
-            return
+            return;
         }
         if (!['FMTU'].includes(name)) {
             if (this.messageTypes.hasOwnProperty(name)) {
-                const fields = this.messageTypes[name].expressions
+                const fields = this.messageTypes[name].expressions;
                 if (!fields.includes('time_boot_ms')) {
-                    fields.push('time_boot_ms')
+                    fields.push('time_boot_ms');
                 }
-                const mergedData = {}
+                const mergedData = {};
                 for (const field of fields) {
-                    mergedData[field] = []
+                    mergedData[field] = [];
                 }
                 for (const message of this.messages[name]) {
                     for (let i = 1; i < fields.length; i++) {
-                        const fieldname = fields[i]
-                        mergedData[fieldname].push(message[fieldname])
+                        const fieldname = fields[i];
+                        mergedData[fieldname].push(message[fieldname]);
                     }
                 }
-                delete this.messages[name]
-                this.messages[name] = mergedData
+                delete this.messages[name];
+                this.messages[name] = mergedData;
                 for (const field of this.messageTypes[name].expressions) {
                     if (this.messages[name][field] && !isNaN(this.messages[name][field][0])) {
-                        const newData = new Float64Array(this.messages[name][field])
-                        delete this.messages[name][field]
-                        this.messages[name][field] = newData
+                        const newData = new Float64Array(this.messages[name][field]);
+                        delete this.messages[name][field];
+                        this.messages[name][field] = newData;
                     }
                 }
             }
@@ -738,72 +770,72 @@ class DataflashParser {
     }
 
     populateUnits () {
-        // console.log(this.messages['FMTU'])
+        if(DEBUG) console.log(this.messages['FMTU']); // FC
         for (const msg of this.messages.FMTU) {
-            this.FMT[msg.FmtType].units = []
+            this.FMT[msg.FmtType].units = [];
             for (const unit of msg.UnitIds) {
-                this.FMT[msg.FmtType].units.push(units[unit])
+                this.FMT[msg.FmtType].units.push(units[unit]);
             }
-            this.FMT[msg.FmtType].multipliers = []
+            this.FMT[msg.FmtType].multipliers = [];
             for (const mult of msg.MultIds) {
-                this.FMT[msg.FmtType].multipliers.push(multipliers[mult])
+                this.FMT[msg.FmtType].multipliers.push(multipliers[mult]);
             }
         }
     }
 
     extractStartTime () {
-        const msgs = this.messages.GPS
+        const msgs = this.messages.GPS;
         for (const i in msgs.time_boot_ms) {
             if (msgs.GWk[i] > 1000) { // lousy validation
-                const weeks = msgs.GWk[i]
-                const ms = msgs.GMS[i]
-                let d = new Date((315964800.0 + ((60 * 60 * 24 * 7) * weeks) + ms / 1000.0) * 1000.0)
+                const weeks = msgs.GWk[i];
+                const ms = msgs.GMS[i];
+                let d = new Date((315964800.0 + ((60 * 60 * 24 * 7) * weeks) + ms / 1000.0) * 1000.0);
                 // adjusting for leap seconds
-                d = new Date(d.getTime() - this.leapSecondsGPS(d.getUTCFullYear(), d.getUTCMonth() + 1) * 1000)
-                return d
+                d = new Date(d.getTime() - this.leapSecondsGPS(d.getUTCFullYear(), d.getUTCMonth() + 1) * 1000);
+                return d;
             }
         }
     }
 
     leapSecondsGPS (year, month) {
-        return this.leapSecondsTAI(year, month) - 19
+        return this.leapSecondsTAI(year, month) - 19;
     }
 
     leapSecondsTAI (year, month) {
-        const yyyymm = year * 100 + month
-        if (yyyymm >= 201701) return 37
-        if (yyyymm >= 201507) return 36
-        if (yyyymm >= 201207) return 35
-        if (yyyymm >= 200901) return 34
-        if (yyyymm >= 200601) return 33
-        if (yyyymm >= 199901) return 32
-        if (yyyymm >= 199707) return 31
-        if (yyyymm >= 199601) return 30
+        const yyyymm = year * 100 + month;
+        if (yyyymm >= 201701) return 37;
+        if (yyyymm >= 201507) return 36;
+        if (yyyymm >= 201207) return 35;
+        if (yyyymm >= 200901) return 34;
+        if (yyyymm >= 200601) return 33;
+        if (yyyymm >= 199901) return 32;
+        if (yyyymm >= 199707) return 31;
+        if (yyyymm >= 199601) return 30;
 
-        return 0
+        return 0;
     }
 
-    processData (data) {
-        this.buffer = data
-        this.data = new DataView(this.buffer)
-        this.DfReader()
-        const messageTypes = {}
-        this.parseAtOffset('FMTU')
-        this.populateUnits()
-        const typeSet = new Set(this.msgType)
+    processFMTs (data) {
+        this.buffer = data;
+        this.data = new DataView(this.buffer);
+        this.DfReader();
+        const messageTypes = {};
+        this.parseAtOffset('FMTU');
+        this.populateUnits();
+        const typeSet = new Set(this.msgType);
         for (const msg of this.FMT) {
             if (msg) {
                 if (typeSet.has(msg.Type)) {
-                    const fields = msg.Columns.split(',')
+                    const fields = msg.Columns.split(',');
                     // expressions = expressions.filter(e => e !== 'TimeUS')
-                    const complexFields = {}
+                    const complexFields = {};
                     if (msg.hasOwnProperty('units')) {
                         for (const field in fields) {
                             complexFields[fields[field]] = {
                                 name: fields[field],
                                 units: (multipliersTable[msg.multipliers[field]] || '') + msg.units[field],
                                 multiplier: msg.multipliers[field]
-                            }
+                            };
                         }
                     } else {
                         for (const field in fields) {
@@ -811,10 +843,10 @@ class DataflashParser {
                                 name: fields[field],
                                 units: '?',
                                 multiplier: 1
-                            }
+                            };
                         }
                     }
-                    const availableInstances = this.checkNumberOfInstances(msg.Name)
+                    const availableInstances = this.checkNumberOfInstances(msg.Name);
                     if (availableInstances.length > 1) {
                         for (const instance of availableInstances) {
                             messageTypes[msg.Name + '[' + instance + ']'] = {
@@ -822,7 +854,7 @@ class DataflashParser {
                                 units: msg.units,
                                 multipiers: msg.multipliers,
                                 complexFields: complexFields
-                            }
+                            };
                         }
                     } else {
                         messageTypes[msg.Name] = {
@@ -830,59 +862,124 @@ class DataflashParser {
                             units: msg.units,
                             multipiers: msg.multipliers,
                             complexFields: complexFields
-                        }
+                        };
                     }
                 }
             }
         }
-        self.postMessage({ availableMessages: messageTypes })
-        this.messageTypes = messageTypes
-        this.parseAtOffset('CMD')
-        this.parseAtOffset('MSG')
-        this.parseAtOffset('FILE')
-        this.processFiles()
-        this.parseAtOffset('MODE')
-        this.parseAtOffset('AHR2')
-        this.parseAtOffset('ATT')
-        this.parseAtOffset('GPS')
-        this.parseAtOffset('POS')
-        this.parseAtOffset('XKQ1')
-        this.parseAtOffset('XKQ')
-        this.parseAtOffset('NKQ1')
-        this.parseAtOffset('NKQ2')
-        this.parseAtOffset('XKQ2')
-        this.parseAtOffset('PARM')
-        this.parseAtOffset('MSG')
-        this.parseAtOffset('STAT')
-        this.parseAtOffset('EV')
-        const metadata = {
-            startTime: this.extractStartTime()
-        }
-        self.postMessage({ metadata: metadata })
-
-        self.postMessage({ messagesDoneLoading: true })
-        return { types: this.messageTypes, messages: this.messages }
+        self.postMessage({ availableMessages: messageTypes });
+        this.messageTypes = messageTypes;
     }
 
+// FC, the function looks different but delivers the same :)
+    processData (data) {
+        this.processFMTs(data);
+        this.parseAtOffset('CMD');
+        this.parseAtOffset('MSG');
+        this.parseAtOffset('FILE');
+        this.processFiles();
+        this.parseAtOffset('MODE');
+        this.parseAtOffset('AHR2');
+        this.parseAtOffset('ATT');
+        this.parseAtOffset('GPS');
+        this.parseAtOffset('POS');
+        this.parseAtOffset('XKQ1');
+        this.parseAtOffset('XKQ');
+        this.parseAtOffset('NKQ1');
+        this.parseAtOffset('NKQ2');
+        this.parseAtOffset('XKQ2');
+        this.parseAtOffset('PARM');
+        this.parseAtOffset('MSG');
+        this.parseAtOffset('STAT');
+        this.parseAtOffset('EV');
+        const metadata = {
+            startTime: this.extractStartTime()
+        };
+        self.postMessage({ metadata: metadata });
+
+        self.postMessage({ messagesDoneLoading: true });
+        return { types: this.messageTypes, messages: this.messages };
+    }
+
+// FC, new functions that merges several message types into one    
+    shallowDataMergeArrObj(types)    {
+        // Array of Objects
+        // merge assumes same density and uniform data distribution
+        // it will look for the first message type in types and then will append others using the same index/offset
+        // data time span is limited to the overlap of messages for all types, messages that do not overlap in time to the left and right are rejected        
+        
+        // analyse the messages first
+        // the messages must be parsed using parseAtOffsetArrObj function
+        let analysis = [];
+        types.map((t,i) => {
+            analysis[i] = {};
+            analysis[i].type = t;
+            const ll = this.messages[t].length;
+            analysis[i].start = this.messages[t][0].time_boot_ms;
+            analysis[i].stop = this.messages[t][ll-1].time_boot_ms;
+            analysis[i].samples = ll;
+            analysis[i].density = 1.0e3 * analysis[i].samples / (analysis[i].stop - analysis[i].start); // Hz
+        });
+        // density and samples has been reviewed in the debugger and found satisfactory for all logs
+         
+        // find the last start in all messages
+        const lastStart = analysis.reduce(function(prev, current) {  return (prev.start > current.start) ? prev : current;  });
+        // find index for the lastStart in all messages
+        // {...v, firstIndex: ternary} } extends ts for each type with firstIndex key/value where ternary calculates the value for the firstIndex
+        const analysis2 = analysis.map(v => { return {...v, firstIndex: this.messages[v.type].findIndex( (e) => e.time_boot_ms >= lastStart.start )    };      });
+        // find the first stop in all messages
+        const firstStop = analysis.reduce(function(prev, current) { return (prev.stop < current.stop) ? prev : current;  });
+        // find index for the firstStop in all messages        
+        const analysis3 = analysis2.map(v => { return {...v, lastIndex: this.messages[v.type].findIndex( (e) => e.time_boot_ms >= firstStop.stop )    };      });
+
+        
+        // start working on the merge
+        // create an array of objects
+        const arrN = [...types].join('');
+        this.messages[arrN] = [];
+        let shorts = [];
+        types.map((t,i) => { 
+            shorts[t] = this.messages[t].slice( analysis3[i].firstIndex, analysis3[i].lastIndex ); 
+        });
+        const shortest = types.reduce(function(prev, current) { return (prev < shorts[current].length) ? prev : shorts[current].length;  });        
+        for (let i = 0; i < shortest; i++)   {            
+            //this.messages[arrN][i] = {...shorts['ATT'][i], ...shorts['POS'][i], ...shorts['XKF1'][i]};
+            this.messages[arrN][i] = {};
+            types.map(t => {
+                Object.assign(this.messages[arrN][i], shorts[t][i]);
+            });            
+        }
+
+        return this.messages[arrN];
+    }
+
+// FC, place holder for another message merge function, if required    
+    deepDataMergeArrObj(master, types)    {
+        // TODO
+        // merge is perfomed by comparing the timestamps and calculating the estimated value between the closest point
+        // data is limited to the overlap for all types
+        // master is the message type what will be extended with other data types
+        
+    }
+
+
     loadType (type) {
-        this.parseAtOffset(type)
-        console.log('done')
+        this.parseAtOffset(type);
+        if(DEBUG) console.log('done'); // FC
     }
 }
 
 self.addEventListener('message', function (event) {
-    let parser
+    let parser;
     if (event.data === null) {
-        console.log('got bad file message!')
+        if(DEBUG) console.log('got bad file message!'); // FC
     } else if (event.data.action === 'parse') {
-        parser = new DataflashParser()
-        const data = event.data.file
-        parser.processData(data)
+        parser = new DataflashParser();
+        const data = event.data.file;
+        parser.processData(data);
     } else if (event.data.action === 'loadType') {
-        parser.loadType(event.data.type.split('[')[0])
+        parser.loadType(event.data.type.split('[')[0]);
     } else if (event.data.action === 'trimFile') {
-        parser.trimFile(event.data.time)
+        parser.trimFile(event.data.time);
     }
-})
-
-export default DataflashParser
+});
