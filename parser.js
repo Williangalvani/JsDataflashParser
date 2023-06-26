@@ -753,6 +753,9 @@ class DataflashParser {
 
     extractStartTime () {
         const msgs = this.messages.GPS
+        if (msgs == undefined) {
+            return
+        }
         for (const i in msgs.time_boot_ms) {
             if (msgs.GWk[i] > 1000) { // lousy validation
                 const weeks = msgs.GWk[i]
@@ -783,7 +786,7 @@ class DataflashParser {
         return 0
     }
 
-    processData (data) {
+    processData (data, msgs) {
         this.buffer = data
         this.data = new DataView(this.buffer)
         this.DfReader()
@@ -837,24 +840,18 @@ class DataflashParser {
         }
         self.postMessage({ availableMessages: messageTypes })
         this.messageTypes = messageTypes
-        this.parseAtOffset('CMD')
-        this.parseAtOffset('MSG')
-        this.parseAtOffset('FILE')
-        this.processFiles()
-        this.parseAtOffset('MODE')
-        this.parseAtOffset('AHR2')
-        this.parseAtOffset('ATT')
-        this.parseAtOffset('GPS')
-        this.parseAtOffset('POS')
-        this.parseAtOffset('XKQ1')
-        this.parseAtOffset('XKQ')
-        this.parseAtOffset('NKQ1')
-        this.parseAtOffset('NKQ2')
-        this.parseAtOffset('XKQ2')
-        this.parseAtOffset('PARM')
-        this.parseAtOffset('MSG')
-        this.parseAtOffset('STAT')
-        this.parseAtOffset('EV')
+
+        if (msgs == null) {
+            // Default messages
+            msgs = ['CMD','MSG','FILE','MODE','AHR2','ATT','GPS','POS',
+                    'XKQ1','XKQ','NKQ1','NKQ2','XKQ2','PARM','MSG','STAT','EV']
+        }
+        for (const msg of msgs) {
+            this.parseAtOffset(msg)
+            if (msg == 'FILE') {
+                this.processFiles()
+            }
+        }
         const metadata = {
             startTime: this.extractStartTime()
         }
