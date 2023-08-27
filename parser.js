@@ -753,7 +753,7 @@ class DataflashParser {
 
     extractStartTime () {
         const msgs = this.messages.GPS
-        if (msgs == undefined) {
+        if (msgs === undefined) {
             return
         }
         for (const i in msgs.time_boot_ms) {
@@ -841,14 +841,14 @@ class DataflashParser {
         self.postMessage({ availableMessages: messageTypes })
         this.messageTypes = messageTypes
 
-        if (msgs == null) {
+        if (msgs === null) {
             // Default messages
             msgs = ['CMD','MSG','FILE','MODE','AHR2','ATT','GPS','POS',
                     'XKQ1','XKQ','NKQ1','NKQ2','XKQ2','PARM','MSG','STAT','EV']
         }
         for (const msg of msgs) {
             this.parseAtOffset(msg)
-            if (msg == 'FILE') {
+            if (msg === 'FILE') {
                 this.processFiles()
             }
         }
