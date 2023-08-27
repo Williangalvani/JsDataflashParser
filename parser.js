@@ -719,7 +719,7 @@ class DataflashParser {
                     mergedData[field] = []
                 }
                 for (const message of this.messages[name]) {
-                    for (let i = 1; i < fields.length; i++) {
+                    for (let i = 0; i < fields.length; i++) {
                         const fieldname = fields[i]
                         mergedData[fieldname].push(message[fieldname])
                     }
