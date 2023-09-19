@@ -579,7 +579,12 @@ class DataflashParser {
         for (let i = 0; i < this.msgType.length; i++) {
             if (type === this.msgType[i]) {
                 this.offset = this.offsetArray[i] + instance_offset
-                availableInstances.add(this.parse_type(instance_type))
+                try {
+                    availableInstances.add(this.parse_type(instance_type))
+                } catch (e) {
+                    // This happens if we reach the end of the log
+                    console.log(e)
+                }
             }
         }
         return Array.from(availableInstances)
