@@ -257,121 +257,156 @@ class DataflashParser {
         this.alreadyParsed = []
     }
 
+    // Parse given data type from log
+    parse_type(type) {
+        let ret
+        switch (type) {
+            case 'a': // int16_t[32]
+                ret = []
+                for (let j = 0; j < 32; j++) {
+                    ret[j] = this.data.getInt16(this.offset, true)
+                    this.offset += 2
+                }
+                break
+            case 'b':
+                ret = this.data.getInt8(this.offset)
+                this.offset += 1
+                break
+            case 'B':
+                ret = this.data.getUint8(this.offset)
+                this.offset += 1
+                break
+            case 'h':
+                ret = this.data.getInt16(this.offset, true)
+                this.offset += 2
+                break
+            case 'H':
+                ret = this.data.getUint16(this.offset, true)
+                this.offset += 2
+                break
+            case 'i':
+                ret = this.data.getInt32(this.offset, true)
+                this.offset += 4
+                break
+            case 'I':
+                ret = this.data.getUint32(this.offset, true)
+                this.offset += 4
+                break
+            case 'f':
+                ret = this.data.getFloat32(this.offset, true)
+                this.offset += 4
+                break
+            case 'd':
+                ret = this.data.getFloat64(this.offset, true)
+                this.offset += 8
+                break
+            case 'Q': {
+                let low = this.data.getUint32(this.offset, true)
+                this.offset += 4
+                ret = this.data.getUint32(this.offset, true) * 4294967296.0 + low
+                if (low < 0) ret += 4294967296
+                this.offset += 4
+                break
+            }
+            case 'q': {
+                let low = this.data.getInt32(this.offset, true)
+                this.offset += 4
+                ret = this.data.getInt32(this.offset, true) * 4294967296.0 + low
+                if (low < 0) ret += 4294967296
+                this.offset += 4
+                break
+            }
+            case 'n':
+                // TODO: fix these regex and unsilent linter
+                // eslint-disable-next-line
+                ret = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '')
+                this.offset += 4
+                break
+            case 'N':
+                // eslint-disable-next-line
+                ret = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '')
+                this.offset += 16
+                break
+            case 'Z':
+                // eslint-disable-next-line
+                ret = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '')
+                this.offset += 64
+                break
+            case 'c':
+                // this.this.data.setInt16(offset,true);
+                ret = this.data.getInt16(this.offset, true) / 100
+                this.offset += 2
+                break
+            case 'C':
+                // this.data.setUint16(offset,true);
+                ret = this.data.getUint16(this.offset, true) / 100
+                this.offset += 2
+                break
+            case 'E':
+                // this.data.setUint32(offset,true);
+                ret = this.data.getUint32(this.offset, true) / 100
+                this.offset += 4
+                break
+            case 'e':
+                // this.data.setInt32(offset,true);
+                ret = this.data.getInt32(this.offset, true) / 100
+                this.offset += 4
+                break
+            case 'L':
+                // this.data.setInt32(offset,true);
+                ret = this.data.getInt32(this.offset, true)
+                this.offset += 4
+                break
+            case 'M':
+                // this.data.setInt32(offset,true);
+                ret = this.data.getUint8(this.offset)
+                this.offset += 1
+                break
+        }
+        return ret
+    }
+
+    // Get size of given type
+    get_size_of(type) {
+        switch (type) {
+            case 'b': // Int8
+            case 'B': // Uint8
+            case 'M': // Uint8 flight mode
+                return 1
+            case 'h': // Int16
+            case 'H': // Uint16
+            case 'c': // Int16 * 100
+            case 'C': // Uint16 * 100
+                return 2
+            case 'i': // Int32
+            case 'I': // Uint32
+            case 'f': // Float32
+            case 'n': // char[4]
+            case 'E': // Uint32 * 100
+            case 'e': // Int32 * 100
+            case 'L': // Int32 latitude/longitude
+                return 4
+            case 'd': // Float64
+            case 'Q': // Uint64
+            case 'q': // int64
+                return 8
+            case 'N': // char[16]
+                return 16
+            case 'a': // int16_t[32]
+            case 'Z': // char[64]
+                return 64
+        }
+    }
+
     FORMAT_TO_STRUCT (obj) {
-        let temp
         const dict = {
             name: obj.Name,
             fieldnames: obj.Columns.split(',')
         }
 
         const column = assignColumn(obj.Columns)
-        let low
-        let n
         for (let i = 0; i < obj.Format.length; i++) {
-            temp = obj.Format.charAt(i)
-            switch (temp) {
-            case 'a': // int16_t[32]
-                dict[column[i]] = []
-                for (let j = 0; j < 32; j++) {
-                    dict[column[i]][j] = this.data.getInt16(this.offset, true)
-                    this.offset += 2
-                }
-                break
-            case 'b':
-                dict[column[i]] = this.data.getInt8(this.offset)
-                this.offset += 1
-                break
-            case 'B':
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
-            case 'h':
-                dict[column[i]] = this.data.getInt16(this.offset, true)
-                this.offset += 2
-                break
-            case 'H':
-                dict[column[i]] = this.data.getUint16(this.offset, true)
-                this.offset += 2
-                break
-            case 'i':
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                break
-            case 'I':
-                dict[column[i]] = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                break
-            case 'f':
-                dict[column[i]] = this.data.getFloat32(this.offset, true)
-                this.offset += 4
-                break
-            case 'd':
-                dict[column[i]] = this.data.getFloat64(this.offset, true)
-                this.offset += 8
-                break
-            case 'Q':
-                low = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                n = this.data.getUint32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
-            case 'q':
-                low = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                n = this.data.getInt32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
-            case 'n':
-                // TODO: fix these regex and unsilent linter
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '')
-                this.offset += 4
-                break
-            case 'N':
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '')
-                this.offset += 16
-                break
-            case 'Z':
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '')
-                this.offset += 64
-                break
-            case 'c':
-                // this.this.data.setInt16(offset,true);
-                dict[column[i]] = this.data.getInt16(this.offset, true) / 100
-                this.offset += 2
-                break
-            case 'C':
-                // this.data.setUint16(offset,true);
-                dict[column[i]] = this.data.getUint16(this.offset, true) / 100
-                this.offset += 2
-                break
-            case 'E':
-                // this.data.setUint32(offset,true);
-                dict[column[i]] = this.data.getUint32(this.offset, true) / 100
-                this.offset += 4
-                break
-            case 'e':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true) / 100
-                this.offset += 4
-                break
-            case 'L':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                break
-            case 'M':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
-            }
+            dict[column[i]] = this.parse_type(obj.Format.charAt(i))
         }
         return dict
     }
@@ -514,42 +549,40 @@ class DataflashParser {
         return parsed
     }
 
-    checkNumberOfInstances (name) {
-        // Similar to parseOffset, but finishes earlier and updates messageTypes
-        const type = this.getMsgType(name)
-        const availableInstances = []
-        const instanceField = this.getInstancesFieldName(name)
-        if (instanceField === null) {
+    checkNumberOfInstances (msg) {
+        // Parse whole log checking only instance field
+        const instanceField = this.getInstancesFieldName(msg.Name)
+        if (instanceField == null) {
             return [1]
         }
-        let repeats = 0
+
+        // Find the offset of the instance field
+        // this means we can jump to it without parsing the whole msg
+        let instance_offset = 0
+        let instance_type
+        const fields = msg.Columns.split(',')
+        for (let i = 0; i < fields.length; i++) {
+            if (fields[i] === instanceField) {
+                instance_type = msg.Format.charAt(i)
+                break
+            }
+            instance_offset += this.get_size_of(msg.Format.charAt(i))
+        }
+
+        if (instance_type == null) {
+            console.log("Could not find instance offset in " + msg.Name)
+            return [1]
+        }
+
+        const type = this.getMsgType(msg.Name)
+        const availableInstances = new Set()
         for (let i = 0; i < this.msgType.length; i++) {
             if (type === this.msgType[i]) {
-                this.offset = this.offsetArray[i]
-                try {
-                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]])
-                    if (temp.name != null) {
-                        const msg = temp
-                        if (!msg.hasOwnProperty(instanceField)) {
-                            break
-                        }
-                        // we do an early return after we get 20 repeated instance numbers. should we?
-                        const instance = msg[instanceField]
-                        if (availableInstances.includes(instance)) {
-                            repeats += 1
-                            if (repeats > 20) {
-                                return availableInstances
-                            }
-                        } else {
-                            availableInstances.push(instance)
-                        }
-                    }
-                } catch (e) {
-                    console.log(e)
-                }
+                this.offset = this.offsetArray[i] + instance_offset
+                availableInstances.add(this.parse_type(instance_type))
             }
         }
-        return availableInstances
+        return Array.from(availableInstances)
     }
 
     timestamp (TimeUs) {
@@ -817,7 +850,7 @@ class DataflashParser {
                             }
                         }
                     }
-                    const availableInstances = this.checkNumberOfInstances(msg.Name)
+                    const availableInstances = this.checkNumberOfInstances(msg)
                     if (availableInstances.length > 1) {
                         for (const instance of availableInstances) {
                             messageTypes[msg.Name + '[' + instance + ']'] = {
