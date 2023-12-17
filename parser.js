@@ -903,6 +903,59 @@ class DataflashParser {
         this.parseAtOffset(type)
         console.log('done')
     }
+
+    // Return array of objects giving stats about the composition of the log, sizes in bytes
+    stats() {
+
+        // Work out size of single message, all message have a 3 byte header
+        const get_msg_size = (Format) => {
+            let size = 3
+            for (let i = 0; i < Format.length; i++) {
+                size += this.get_size_of(Format.charAt(i))
+            }
+            return size
+        }
+
+        let total_size_check = 0
+        const typeSet = new Set(this.msgType)
+        let ret = {}
+        for (const msg of this.FMT) {
+            if (msg && typeSet.has(msg.Type)) {
+                // Count occurrences
+                let count = 0
+                for (const type of this.msgType) {
+                    if (type == msg.Type) {
+                        count++
+                    }
+                }
+
+
+                const msg_size = get_msg_size(msg.Format)
+                const size = msg_size * count
+                ret[msg.Name] = { count, msg_size, size }
+
+                total_size_check += size
+            }
+        }
+
+        // Total should match log size
+        // May only have a partial last msg so allow size smaller
+        let last_msg_size = 0
+        const last_msg_type = this.msgType[this.msgType.length - 1]
+        for (const msg of this.FMT) {
+            if (msg && (last_msg_type == msg.Type)) {
+                last_msg_size = get_msg_size(msg.Format)
+                break
+            }
+        }
+
+        if (((total_size_check - last_msg_size) > this.data.byteLength) || (total_size_check < this.data.byteLength)) {
+            console.warn("Stats total size incorrect, got: " + total_size_check + " want: " + this.data.byteLength + " diff: " + (total_size_check-this.data.byteLength))
+        }
+
+        return ret
+    }
+
 }
 
 self.addEventListener('message', function (event) {
