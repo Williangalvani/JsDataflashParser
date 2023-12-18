@@ -879,7 +879,7 @@ class DataflashParser {
         self.postMessage({ availableMessages: messageTypes })
         this.messageTypes = messageTypes
 
-        if (msgs === null) {
+        if (msgs === undefined) {
             // Default messages
             msgs = ['CMD','MSG','FILE','MODE','AHR2','ATT','GPS','POS',
                     'XKQ1','XKQ','NKQ1','NKQ2','XKQ2','PARM','MSG','STAT','EV']
