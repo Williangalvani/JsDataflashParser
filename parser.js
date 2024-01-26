@@ -247,7 +247,6 @@ class DataflashParser {
         this.sent = false
         this.maxPercentageInterval = 0.05
         this.messageTypes = {}
-        this.alreadyParsed = []
     }
 
     // Return array for given data type with length len
@@ -497,70 +496,98 @@ class DataflashParser {
             this.messages[name] = []
             return []
         }
-        const is_mode = msg_FMT.Name === 'MODE'
-        const len = msg_FMT.OffsetArray.length
-        const parsed = new Array(len)
-        for (let i = 0; i < len; i++) {
-            this.offset = msg_FMT.OffsetArray[i]
-            const temp = this.FORMAT_TO_STRUCT(msg_FMT)
-            if (is_mode) {
-                // Add mode string to mode message
-                temp.asText = this.getModeString(temp.Mode)
+
+        const parse = (msg, offsets) => {
+            const len = offsets.length
+            if (len == 0) {
+                return {}
             }
+            const Format = msg.Format
+            const num_fields = Format.length
+            let time_index 
 
-            // Convert to milliseconds
-            temp.time_boot_ms = temp.TimeUS / 1000
-            delete temp.TimeUS
+            // Pre allocate arrays
+            const parsed = {}
+            for (let i = 0; i < num_fields; i++) {
+                const name = msg.Columns[i]
+                if (name == "TimeUS") {
+                    // Override TimeUS to time_boot_ms allowing conversion to milliseconds
+                    time_index = i
+                    parsed.time_boot_ms = new Float64Array(len)
 
-            parsed[i] = temp
-
-            if (i % 1000 === 0) {
-                const perc = 100 * i / len
-                self.postMessage({ percentage: perc })
-            }
-        }
-        delete this.messages[name]
-        this.messages[name] = parsed
-
-        self.postMessage({ percentage: 100 })
-        console.log(name, this.messageHasInstances(name) ? 'has instances' : 'has no instances')
-        if (parsed.length && this.messageHasInstances(name)) {
-            const instanceField = this.getInstancesFieldName(name)
-            const instances = {}
-            for (const msg of parsed) {
-                try {
-                    instances[msg[instanceField]].push(msg)
-                } catch (e) {
-                    instances[msg[instanceField]] = [msg]
+                } else {
+                    // Use correct array type for this format
+                    parsed[name] = this.get_type_array(Format.charAt(i), len)
                 }
             }
-            if (Object.keys(instances).length === 1) {
-                this.fixDataOnce(name)
-                this.simplifyData(name)
-                this.postData({ messageType: name, messageList: this.messages[name] })
-                return parsed
+
+            // For each log message
+            for (let i = 0; i < len; i++) {
+                this.offset = offsets[i]
+
+                // For each field
+                for (let j = 0; j < num_fields; j++) {
+                    if (j == time_index) {
+                        // us to ms
+                        parsed.time_boot_ms[i] = this.parse_type(Format.charAt(j)) / 1000.0
+                    } else {
+                        const name = msg.Columns[j]
+                        parsed[name][i] = this.parse_type(Format.charAt(j))
+                    }
+                }
+
+                if (i % 1000 === 0) {
+                    const perc = 100 * i / len
+                    self.postMessage({ percentage: perc })
+                }
             }
-            for (const [index, messages] of Object.entries(instances)) {
-                const newName = name + '[' + index + ']'
-                this.messages[newName] = messages
-                this.fixDataOnce(newName)
-                this.simplifyData(newName)
-                this.postData({
-                    messageType: newName,
-                    messageList: this.messages[newName]
-                })
-            }
-        } else if (parsed.length) {
-            this.fixDataOnce(name)
-            this.simplifyData(name)
-            this.postData({ messageType: name, messageList: this.messages[name] })
+
+            return parsed
         }
-        this.alreadyParsed.push(name)
-        return parsed
+
+        delete this.messages[name]
+
+        const has_instance = this.messageHasInstances(name)
+        console.log(name, has_instance ? 'has instances' : 'has no instances')
+
+        if (has_instance && ("InstancesOffsetArray" in msg_FMT) && (Object.keys(msg_FMT.InstancesOffsetArray).length > 1)) {
+            // Parse instances
+            for (const [index, offsets] of Object.entries(msg_FMT.InstancesOffsetArray)) {
+                const inst_name = name + '[' + index + ']'
+                this.messages[inst_name] = parse(msg_FMT, offsets)
+                this.postData({ messageType: inst_name, messageList: this.messages[inst_name] })
+            }
+            self.postMessage({ percentage: 100 })
+
+
+            // Old behavior was to return the un-fixed and un-split data here
+            // Putting something in this array makes WebTools work but its dumb
+            // Could be anything....
+            this.messages[name] = { found_log: true }
+            return this.messages[name]
+        }
+
+        // Parse as single msg
+        this.messages[name] = parse(msg_FMT, msg_FMT.OffsetArray)
+
+        // Add mode string to mode message
+        if (msg_FMT.Name === 'MODE') {
+            const mode_len = this.messages[name].Mode.length
+            this.messages[name].asText = new Array(mode_len)
+            for (let i = 0; i < mode_len; i++) {
+                this.messages[name].asText[i] = this.getModeString(this.messages[name].Mode[i])
+            }
+        }
+
+        this.postData({ messageType: name, messageList: this.messages[name] })
+        self.postMessage({ percentage: 100 })
+
+        return this.messages[name]
     }
 
     checkNumberOfInstances (msg) {
         // Parse whole log checking only instance field
+        // Populates array offsets of instances, this allows them to be loaded individually
         const instanceField = this.getInstancesFieldName(msg.Name)
         if (instanceField == null) {
             return [1]
@@ -584,15 +611,19 @@ class DataflashParser {
             return [1]
         }
 
-
-        const availableInstances = new Set()
-        const msg_FMT = this.getFMT(msg.Name)
-        const len = msg_FMT.OffsetArray.length
+        const availableInstances = []
+        msg.InstancesOffsetArray = {}
+        const len = msg.OffsetArray.length
         for (let i = 0; i < len; i++) {
-            this.offset = msg_FMT.OffsetArray[i] + instance_offset
-            availableInstances.add(this.parse_type(instance_type))
+            this.offset = msg.OffsetArray[i] + instance_offset
+            const instance = this.parse_type(instance_type)
+            if (msg.InstancesOffsetArray[instance] == null) {
+                msg.InstancesOffsetArray[instance] = []
+                availableInstances.push(instance)
+            }
+            msg.InstancesOffsetArray[instance].push(msg.OffsetArray[i])
         }
-        return Array.from(availableInstances)
+        return availableInstances
     }
 
     timestamp (TimeUs) {
@@ -723,24 +754,6 @@ class DataflashParser {
         return getModeMap(MAV_TYPE_QUADROTOR)[cmode]
     }
 
-    fixDataOnce (name) {
-        if (!['GPS', 'ATT', 'AHR2', 'MODE'].includes(name)) {
-            if (this.messageTypes.hasOwnProperty(name)) {
-                const fields = this.messages[name][0].fieldnames
-                if (this.messageTypes[name].hasOwnProperty('multipliers')) {
-                    for (const message in this.messages[name]) {
-                        for (let i = 1; i < fields.length; i++) {
-                            const fieldname = fields[i]
-                            if (!isNaN(this.messageTypes[name].multipliers[i])) {
-                                this.messages[name][message][fieldname] *= this.messageTypes[name].multipliers[i]
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     concatTypedArrays (a, b) { // a, b TypedArray of same type
         const c = new (a.constructor)(a.length + b.length)
         c.set(a, 0)
@@ -758,63 +771,32 @@ class DataflashParser {
 
     processFiles () {
         this.files = {}
-        for (const msg of this.messages.FILE) {
-            if (!this.files.hasOwnProperty(msg.FileName)) {
-                this.files[msg.FileName] = this.createUint8ArrayFromString(msg.Data)
+        const len = this.messages.FILE.FileName.length
+        for (let i = 0; i < len; i++) {
+            const name = this.messages.FILE.FileName[i]
+            const Data = this.messages.FILE.Data[i]
+            if (!this.files.hasOwnProperty(name)) {
+                this.files[name] = this.createUint8ArrayFromString(Data)
             } else {
-                this.files[msg.FileName] = this.concatTypedArrays(
-                    this.files[msg.FileName], this.createUint8ArrayFromString(msg.Data)
+                this.files[name] = this.concatTypedArrays(
+                    this.files[name], this.createUint8ArrayFromString(Data)
                 )
             }
         }
         self.postMessage({ files: this.files })
     }
 
-    simplifyData (name) {
-        if (name === 'MODE') {
-            this.messageTypes[name].expressions.push('asText')
-        }
-        if (name === 'FILE') {
-            return
-        }
-        if (!['FMTU'].includes(name)) {
-            if (this.messageTypes.hasOwnProperty(name)) {
-                const len = this.messages[name].length
-                const mergedData = {}
-                for (const [i, field] of Object.entries(this.messageTypes[name].expressions)) {
-                    mergedData[field] = this.get_type_array(this.messageTypes[name].Format.charAt(i), len)
-                }
-
-                // Extra fields not present in original log
-                let fields = this.messageTypes[name].expressions
-                mergedData['time_boot_ms'] = new Float64Array(len)
-                fields.push('time_boot_ms')
-                if (name === 'MODE') {
-                    mergedData['asText'] = new Array(len)
-                    fields.push('asText')
-                }
-
-                for (let i = 0; i < len; i++) {
-                    for (const field of fields) {
-                        mergedData[field][i] = this.messages[name][i][field]
-                    }
-                }
-                delete this.messages[name]
-                this.messages[name] = mergedData
-            }
-        }
-    }
-
     populateUnits () {
-        // console.log(this.messages['FMTU'])
-        for (const msg of this.messages.FMTU) {
-            this.FMT[msg.FmtType].units = []
-            for (const unit of msg.UnitIds) {
-                this.FMT[msg.FmtType].units.push(units[unit])
+        const len = this.messages.FMTU.time_boot_ms.length
+        for (let i = 0; i < len; i++) {
+            const FmtType = this.messages.FMTU.FmtType[i]
+            this.FMT[FmtType].units = []
+            for (const unit of this.messages.FMTU.UnitIds[i]) {
+                this.FMT[FmtType].units.push(units[unit])
             }
-            this.FMT[msg.FmtType].multipliers = []
-            for (const mult of msg.MultIds) {
-                this.FMT[msg.FmtType].multipliers.push(multipliers[mult])
+            this.FMT[FmtType].multipliers = []
+            for (const mult of this.messages.FMTU.MultIds[i]) {
+                this.FMT[FmtType].multipliers.push(multipliers[mult])
             }
         }
     }
@@ -930,8 +912,6 @@ class DataflashParser {
         let ret = {}
         for (const msg of this.FMT) {
             if (msg) {
-
-
                 // All message have a 3 byte header
                 const msg_size = msg.Size + 3
                 const count = msg.OffsetArray.length
