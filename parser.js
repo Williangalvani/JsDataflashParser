@@ -216,11 +216,6 @@ function getModeMap (mavType) {
     return map
 }
 
-function assignColumn (obj) {
-    const ArrayOfString = obj.split(',')
-    return ArrayOfString
-}
-
 // Converts from degrees to radians.
 Math.radians = function (degrees) {
     return degrees * Math.PI / 180
@@ -243,7 +238,7 @@ class DataflashParser {
             length: '89',
             Name: 'FMT',
             Format: 'BBnNZ',
-            Columns: 'Type,Length,Name,Format,Columns'
+            Columns: ['Type', 'Length', 'Name' , 'Format', 'Columns']
         }
         this.offset = 0
         this.msgType = []
@@ -401,12 +396,11 @@ class DataflashParser {
     FORMAT_TO_STRUCT (obj) {
         const dict = {
             name: obj.Name,
-            fieldnames: obj.Columns.split(',')
+            fieldnames: obj.Columns
         }
 
-        const column = assignColumn(obj.Columns)
         for (let i = 0; i < obj.Format.length; i++) {
-            dict[column[i]] = this.parse_type(obj.Format.charAt(i))
+            dict[obj.Columns[i]] = this.parse_type(obj.Format.charAt(i))
         }
         return dict
     }
@@ -462,7 +456,7 @@ class DataflashParser {
         if (type.units === undefined) {
             return null
         }
-        return type.Columns.split(',')[type.units.indexOf('instance')]
+        return type.Columns[type.units.indexOf('instance')]
     }
 
     // Next three functions are used for transfering data on postmessage, instead of cloning
@@ -560,7 +554,7 @@ class DataflashParser {
         // this means we can jump to it without parsing the whole msg
         let instance_offset = 0
         let instance_type
-        const fields = msg.Columns.split(',')
+        const fields = msg.Columns
         for (let i = 0; i < fields.length; i++) {
             if (fields[i] === instanceField) {
                 instance_type = msg.Format.charAt(i)
@@ -623,25 +617,39 @@ class DataflashParser {
                 this.offsetArray.push(this.offset)
                 this.msgType.push(attribute)
                 try {
-                    var value = this.FORMAT_TO_STRUCT(this.FMT[attribute])
-                    if (this.FMT[attribute].Name === 'GPS') {
-                        this.findTimeBase(value)
+                    const is_FMT = attribute === 128
+                    const is_GPS = this.FMT[attribute].Name === 'GPS'
+                    if (is_FMT || is_GPS) {
+                        // Parse full message
+                        const value = this.FORMAT_TO_STRUCT(this.FMT[attribute])
+                        if (is_FMT) {
+                            // Pre-calculate size of message
+                            var Size = 0
+                            for (let i = 0; i < value.Format.length; i++) {
+                                Size += this.get_size_of(value.Format.charAt(i))
+                            }
+                            this.FMT[value.Type] = {
+                                Type: value.Type,
+                                length: value.Length,
+                                Name: value.Name,
+                                Format: value.Format,
+                                Columns: value.Columns.split(','),
+                                Size
+                            }
+                        } else if (is_GPS) {
+                            this.findTimeBase(value)
+                        }
+                    } else {
+                        // Don't need to parse, advance by msg length
+                        this.offset += this.FMT[attribute].Size
+
                     }
                 } catch (e) {
                     // console.log('reached log end?')
                     // console.log(e)
                     this.offset += 1
                 }
-                if (attribute === 128) {
-                    this.FMT[value.Type] = {
-                        Type: value.Type,
-                        length: value.Length,
-                        Name: value.Name,
-                        Format: value.Format,
-                        Columns: value.Columns
-                    }
-                }
-                // this.onMessage(value)
+
             } else {
                 this.offset += 1
             }
@@ -835,7 +843,7 @@ class DataflashParser {
         for (const msg of this.FMT) {
             if (msg) {
                 if (typeSet.has(msg.Type)) {
-                    const fields = msg.Columns.split(',')
+                    const fields = msg.Columns
                     // expressions = expressions.filter(e => e !== 'TimeUS')
                     const complexFields = {}
                     if (msg.hasOwnProperty('units')) {
@@ -907,15 +915,6 @@ class DataflashParser {
     // Return array of objects giving stats about the composition of the log, sizes in bytes
     stats() {
 
-        // Work out size of single message, all message have a 3 byte header
-        const get_msg_size = (Format) => {
-            let size = 3
-            for (let i = 0; i < Format.length; i++) {
-                size += this.get_size_of(Format.charAt(i))
-            }
-            return size
-        }
-
         let total_size_check = 0
         const typeSet = new Set(this.msgType)
         let ret = {}
@@ -930,7 +929,8 @@ class DataflashParser {
                 }
 
 
-                const msg_size = get_msg_size(msg.Format)
+                // All message have a 3 byte header
+                const msg_size = msg.Size + 3
                 const size = msg_size * count
                 ret[msg.Name] = { count, msg_size, size }
 
@@ -944,7 +944,7 @@ class DataflashParser {
         const last_msg_type = this.msgType[this.msgType.length - 1]
         for (const msg of this.FMT) {
             if (msg && (last_msg_type == msg.Type)) {
-                last_msg_size = get_msg_size(msg.Format)
+                last_msg_size = msg.Size + 3
                 break
             }
         }
