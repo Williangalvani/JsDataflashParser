@@ -578,8 +578,11 @@ class DataflashParser {
                 this.messages[name].asText[i] = this.getModeString(this.messages[name].Mode[i])
             }
         }
-
-        this.postData({ messageType: name, messageList: this.messages[name] })
+        // let's not send FMT as it is not useful for users...
+        // (and because we need the data and we can't access it after postData with transferables)
+        if (name.indexOf('FMT') === -1) {
+          this.postData({ messageType: name, messageList: this.messages[name] })
+        }
         self.postMessage({ percentage: 100 })
 
         return this.messages[name]
@@ -787,18 +790,20 @@ class DataflashParser {
     }
 
     populateUnits () {
-        const len = this.messages.FMTU.time_boot_ms.length
-        for (let i = 0; i < len; i++) {
-            const FmtType = this.messages.FMTU.FmtType[i]
-            this.FMT[FmtType].units = []
-            for (const unit of this.messages.FMTU.UnitIds[i]) {
-                this.FMT[FmtType].units.push(units[unit])
-            }
-            this.FMT[FmtType].multipliers = []
-            for (const mult of this.messages.FMTU.MultIds[i]) {
-                this.FMT[FmtType].multipliers.push(multipliers[mult])
-            }
+      const FmtTypes = this.messages.FMTU.FmtType
+      const UnitIds = this.messages.FMTU.UnitIds
+      const MultIds = this.messages.FMTU.UnitIds
+      for (const index in FmtTypes) {
+        const type = FmtTypes[index]
+        this.FMT[type].units = []
+        for (const unit of UnitIds[index]) {
+            this.FMT[type].units.push(units[unit])
         }
+        this.FMT[type].multipliers = []
+        for (const mult of MultIds[index]) {
+            this.FMT[type].multipliers.push(multipliers[mult])
+        }
+      }
     }
 
     extractStartTime () {
@@ -847,12 +852,11 @@ class DataflashParser {
             if (msg && (msg.OffsetArray.length != 0)) {
                 const fields = msg.Columns
                 const complexFields = {}
-                const have_units = msg.hasOwnProperty('units')
                 for (let i = 0; i < fields.length; i++) {
                     complexFields[fields[i]] = {
                         name: fields[i],
-                        units: !have_units ? '?' : (multipliersTable[msg.multipliers[i]] || '') + msg.units[i],
-                        multiplier: !have_units ? 1.0 : msg.multipliers[i],
+                        units: !msg.units ? '?' : (multipliersTable[msg.multipliers[i]] || '') + msg.units[i],
+                        multiplier: !msg.units ? 1.0 : msg.multipliers[i],
                         Format: msg.Format.charAt(i)
                     }
                 }
@@ -862,7 +866,7 @@ class DataflashParser {
                         messageTypes[msg.Name + '[' + instance + ']'] = {
                             expressions: fields,
                             units: msg.units,
-                            multipiers: msg.multipliers,
+                            multipliers: msg.multipliers,
                             Format: msg.Format,
                             complexFields: complexFields
                         }
@@ -871,7 +875,7 @@ class DataflashParser {
                     messageTypes[msg.Name] = {
                         expressions: fields,
                         units: msg.units,
-                        multipiers: msg.multipliers,
+                        multipliers: msg.multipliers,
                         Format: msg.Format,
                         complexFields: complexFields
                     }
