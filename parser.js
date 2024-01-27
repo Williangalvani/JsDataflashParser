@@ -227,7 +227,7 @@ Math.degrees = function (radians) {
 }
 
 class DataflashParser {
-    constructor () {
+    constructor ( send_postMessage ) {
         this.time = null
         this.timebase = null
         this.buffer = null
@@ -241,12 +241,10 @@ class DataflashParser {
             Columns: ['Type', 'Length', 'Name' , 'Format', 'Columns']
         }
         this.offset = 0
-        this.totalSize = null
         this.messages = {}
-        this.lastPercentage = 0
         this.sent = false
-        this.maxPercentageInterval = 0.05
         this.messageTypes = {}
+        this.send_postMessage = (send_postMessage == null) ? false : send_postMessage
     }
 
     // Return array for given data type with length len
@@ -536,7 +534,7 @@ class DataflashParser {
                     }
                 }
 
-                if (i % 1000 === 0) {
+                if (this.send_postMessage && (i % 1000 === 0)) {
                     const perc = 100 * i / len
                     self.postMessage({ percentage: perc })
                 }
@@ -555,9 +553,13 @@ class DataflashParser {
             for (const [index, offsets] of Object.entries(msg_FMT.InstancesOffsetArray)) {
                 const inst_name = name + '[' + index + ']'
                 this.messages[inst_name] = parse(msg_FMT, offsets)
-                this.postData({ messageType: inst_name, messageList: this.messages[inst_name] })
+                if (this.send_postMessage) {
+                    this.postData({ messageType: inst_name, messageList: this.messages[inst_name] })
+                }
             }
-            self.postMessage({ percentage: 100 })
+            if (this.send_postMessage) {
+                self.postMessage({ percentage: 100 })
+            }
 
 
             // Old behavior was to return the un-fixed and un-split data here
@@ -578,12 +580,15 @@ class DataflashParser {
                 this.messages[name].asText[i] = this.getModeString(this.messages[name].Mode[i])
             }
         }
-        // let's not send FMT as it is not useful for users...
-        // (and because we need the data and we can't access it after postData with transferables)
-        if (name.indexOf('FMT') === -1) {
-          this.postData({ messageType: name, messageList: this.messages[name] })
+
+        if (this.send_postMessage) {
+            // let's not send FMT as it is not useful for users...
+            // (and because we need the data and we can't access it after postData with transferables)
+            if (name.indexOf('FMT') === -1) {
+            this.postData({ messageType: name, messageList: this.messages[name] })
+            }
+            self.postMessage({ percentage: 100 })
         }
-        self.postMessage({ percentage: 100 })
 
         return this.messages[name]
     }
@@ -700,7 +705,7 @@ class DataflashParser {
                     this.offset += 1
                 }
             }
-            if (this.offset - lastOffset > 50000) {
+            if (this.send_postMessage && (this.offset - lastOffset > 50000)) {
                 const perc = 100 * this.offset / this.buffer.byteLength
                 self.postMessage({ percentage: perc })
                 lastOffset = this.offset
@@ -727,9 +732,11 @@ class DataflashParser {
             }
         }
 
-        self.postMessage({ percentage: 100 })
-        self.postMessage({ messages: this.messages })
-        this.sent = true
+        if (this.send_postMessage) {
+            self.postMessage({ percentage: 100 })
+            self.postMessage({ messages: this.messages })
+            this.sent = true
+        }
     }
 
     getModeString (cmode) {
@@ -785,7 +792,9 @@ class DataflashParser {
                 )
             }
         }
-        self.postMessage({ files: this.files })
+        if (this.send_postMessage) {
+            self.postMessage({ files: this.files })
+        }
     }
 
     populateUnits () {
@@ -881,7 +890,9 @@ class DataflashParser {
                 }
             }
         }
-        self.postMessage({ availableMessages: messageTypes })
+        if (this.send_postMessage) {
+            self.postMessage({ availableMessages: messageTypes })
+        }
         this.messageTypes = messageTypes
 
         if (msgs === undefined) {
@@ -898,9 +909,11 @@ class DataflashParser {
         const metadata = {
             startTime: this.extractStartTime()
         }
-        self.postMessage({ metadata: metadata })
+        if (this.send_postMessage) {
+            self.postMessage({ metadata: metadata })
+            self.postMessage({ messagesDoneLoading: true })
+        }
 
-        self.postMessage({ messagesDoneLoading: true })
         return { types: this.messageTypes, messages: this.messages }
     }
 
