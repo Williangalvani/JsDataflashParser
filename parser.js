@@ -774,8 +774,7 @@ class DataflashParser {
 
     processFiles () {
         this.files = {}
-        const len = this.messages.FILE.FileName.length
-        for (let i = 0; i < len; i++) {
+        for (const i in this.messages.FILE.FileName) {
             const name = this.messages.FILE.FileName[i]
             const Data = this.messages.FILE.Data[i]
             if (!this.files.hasOwnProperty(name)) {
