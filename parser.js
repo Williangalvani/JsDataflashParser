@@ -267,8 +267,8 @@ class DataflashParser {
             case 'I': // Uint32
             case 'f': // Float32
             case 'd': // Float64
-            case 'Q': // Uint32
-            case 'q': // Int32
+            case 'Q': // Uint64
+            case 'q': // Int64
             case 'c': // Int16 / 100
             case 'C': // Uint16 / 100
             case 'E': // Uint32 / 100
