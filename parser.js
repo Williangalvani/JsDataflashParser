@@ -857,17 +857,18 @@ class DataflashParser {
                         name: fields[i],
                         units: !msg.units ? '?' : (multipliersTable[msg.multipliers[i]] || '') + msg.units[i],
                         multiplier: !msg.units ? 1.0 : msg.multipliers[i],
-                        Format: msg.Format.charAt(i)
                     }
                 }
                 const availableInstances = this.checkNumberOfInstances(msg)
-                if (availableInstances.length > 1) {
+                if (availableInstances != null) {
+                    messageTypes[msg.Name] = { instances: {} }
                     for (const instance of availableInstances) {
-                        messageTypes[msg.Name + '[' + instance + ']'] = {
+                        const inst_name = msg.Name + '[' + instance + ']'
+                        messageTypes[msg.Name].instances[instance] = inst_name
+                        messageTypes[inst_name] = {
                             expressions: fields,
                             units: msg.units,
                             multipliers: msg.multipliers,
-                            Format: msg.Format,
                             complexFields: complexFields
                         }
                     }
@@ -876,7 +877,6 @@ class DataflashParser {
                         expressions: fields,
                         units: msg.units,
                         multipliers: msg.multipliers,
-                        Format: msg.Format,
                         complexFields: complexFields
                     }
                 }
