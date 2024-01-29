@@ -478,9 +478,8 @@ class DataflashParser {
 
     parseAtOffset (name) {
         const msg_FMT = this.getFMT(name)
-        if ((msg_FMT == null) || (msg_FMT.Name == null)) {
-            this.messages[name] = []
-            return []
+        if (msg_FMT == null) {
+            return
         }
 
         const parse = (msg, offsets) => {
@@ -531,12 +530,10 @@ class DataflashParser {
             return parsed
         }
 
-        delete this.messages[name]
-
-        const has_instance = this.messageHasInstances(name)
+        const has_instance = "InstancesOffsetArray" in msg_FMT
         console.log(name, has_instance ? 'has instances' : 'has no instances')
 
-        if (has_instance && ("InstancesOffsetArray" in msg_FMT) && (Object.keys(msg_FMT.InstancesOffsetArray).length > 1)) {
+        if (has_instance) {
             // Parse instances
             for (const [index, offsets] of Object.entries(msg_FMT.InstancesOffsetArray)) {
                 const inst_name = name + '[' + index + ']'
@@ -549,12 +546,7 @@ class DataflashParser {
                 self.postMessage({ percentage: 100 })
             }
 
-
-            // Old behavior was to return the un-fixed and un-split data here
-            // Putting something in this array makes WebTools work but its dumb
-            // Could be anything....
-            this.messages[name] = { found_log: true }
-            return this.messages[name]
+            return
         }
 
         // Parse as single msg
@@ -578,7 +570,6 @@ class DataflashParser {
             self.postMessage({ percentage: 100 })
         }
 
-        return this.messages[name]
     }
 
     checkNumberOfInstances (msg) {
