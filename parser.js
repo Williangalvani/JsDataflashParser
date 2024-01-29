@@ -452,18 +452,6 @@ class DataflashParser {
         }
     }
 
-    messageHasInstances (name) {
-        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name)
-        return type !== undefined && type.units !== undefined && type.units.includes('instance')
-    }
-
-    getInstancesFieldName (name) {
-        const type = this.FMT.find(msg => msg !== undefined && msg.Name === name)
-        if (type.units === undefined) {
-            return null
-        }
-        return type.Columns[type.units.indexOf('instance')]
-    }
 
     // Next three functions are used for transfering data on postmessage, instead of cloning
     isTypedArray (arr) {
@@ -596,28 +584,23 @@ class DataflashParser {
     checkNumberOfInstances (msg) {
         // Parse whole log checking only instance field
         // Populates array offsets of instances, this allows them to be loaded individually
-        const instanceField = this.getInstancesFieldName(msg.Name)
-        if (instanceField == null) {
-            return [1]
+
+        if (msg.units === undefined) {
+            // Need units for instance flag
+            return
+        }
+
+        const instance_index = msg.units.indexOf('instance')
+        if (instance_index == -1) {
+            // No instances
+            return
         }
 
         // Find the offset of the instance field
         // this means we can jump to it without parsing the whole msg
-        let instance_offset = 0
-        let instance_type
-        const fields = msg.Columns
-        for (let i = 0; i < fields.length; i++) {
-            if (fields[i] === instanceField) {
-                instance_type = msg.Format.charAt(i)
-                break
-            }
-            instance_offset += this.get_size_of(msg.Format.charAt(i))
-        }
+        const instance_offset = msg.FormatOffset[instance_index]
+        const instance_type = msg.Format.charAt(instance_index)
 
-        if (instance_type == null) {
-            console.log("Could not find instance offset in " + msg.Name)
-            return [1]
-        }
 
         const availableInstances = []
         msg.InstancesOffsetArray = {}
@@ -631,6 +614,10 @@ class DataflashParser {
             }
             msg.InstancesOffsetArray[instance].push(msg.OffsetArray[i])
         }
+
+        // Don't need array at base level anymore
+        delete msg.OffsetArray
+
         return availableInstances
     }
 
@@ -678,9 +665,11 @@ class DataflashParser {
                         // Parse full message
                         const value = this.FORMAT_TO_STRUCT(this.FMT[attribute])
                         if (is_FMT) {
-                            // Pre-calculate size of message
-                            var Size = 0
+                            // Pre-calculate size of message and offsets
+                            let Size = 0
+                            let FormatOffset = new Array(value.Format.length) 
                             for (let i = 0; i < value.Format.length; i++) {
+                                FormatOffset[i] = Size
                                 Size += this.get_size_of(value.Format.charAt(i))
                             }
                             this.FMT[value.Type] = {
@@ -689,6 +678,7 @@ class DataflashParser {
                                 Name: value.Name,
                                 Format: value.Format,
                                 Columns: value.Columns.split(','),
+                                FormatOffset,
                                 Size
                             }
                         } else if (is_GPS) {
@@ -718,6 +708,7 @@ class DataflashParser {
             if (this.FMT[i] != null) {
                 if (msg_OffsetArray[i] == null) {
                     // No messages received
+                    this.FMT[i].Total_Length = 0
                     this.FMT[i].OffsetArray = []
                     continue
                 }
@@ -729,6 +720,7 @@ class DataflashParser {
                     // Last message will overflow, remove
                     this.FMT[i].OffsetArray.pop()
                 }
+                this.FMT[i].Total_Length = this.FMT[i].OffsetArray.length
             }
         }
 
@@ -857,7 +849,7 @@ class DataflashParser {
         this.parseAtOffset('FMTU')
         this.populateUnits()
         for (const msg of this.FMT) {
-            if (msg && (msg.OffsetArray.length != 0)) {
+            if (msg && (msg.Total_Length != 0)) {
                 const fields = msg.Columns
                 const complexFields = {}
                 for (let i = 0; i < fields.length; i++) {
@@ -930,7 +922,7 @@ class DataflashParser {
             if (msg) {
                 // All message have a 3 byte header
                 const msg_size = msg.Size + 3
-                const count = msg.OffsetArray.length
+                const count = msg.Total_Length 
                 const size = msg_size * count
                 ret[msg.Name] = { count, msg_size, size }
             }
