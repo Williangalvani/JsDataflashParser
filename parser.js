@@ -863,17 +863,15 @@ class DataflashParser {
     }
 
     populateUnits () {
-      const FmtTypes = this.messages.FMTU.FmtType
-      const UnitIds = this.messages.FMTU.UnitIds
-      const MultIds = this.messages.FMTU.UnitIds
-      for (const index in FmtTypes) {
-        const type = FmtTypes[index]
+      const FMTU = this.get("FMTU")
+      for (const index in FMTU.FmtType) {
+        const type = FMTU.FmtType[index]
         this.FMT[type].units = []
-        for (const unit of UnitIds[index]) {
+        for (const unit of FMTU.UnitIds[index]) {
             this.FMT[type].units.push(units[unit])
         }
         this.FMT[type].multipliers = []
-        for (const mult of MultIds[index]) {
+        for (const mult of FMTU.MultIds[index]) {
             this.FMT[type].multipliers.push(multipliers[mult])
         }
       }
@@ -919,7 +917,6 @@ class DataflashParser {
         this.data = new DataView(this.buffer)
         this.DfReader()
         const messageTypes = {}
-        this.parseAtOffset('FMTU')
         this.populateUnits()
         for (const msg of this.FMT) {
             if (msg && (msg.Total_Length != 0)) {
