@@ -476,6 +476,88 @@ class DataflashParser {
         self.postMessage(data, transferables)
     }
 
+    // Log name, optional instance name, optional field
+    get_instance(name, instance, field) {
+        // Read and return array for given log field, this will not be stored locally
+        const msg_FMT = this.getFMT(name)
+        if (msg_FMT == null) {
+            // no such message
+            return
+        }
+
+        if (instance && !(("InstancesOffsetArray" in msg_FMT) && (instance in msg_FMT.InstancesOffsetArray))) {
+            // instance given but no instances or don't have the given instance
+            return
+        }
+
+        const parse = (offsets) => {
+            const len = offsets.length
+            if (len == 0) {
+                // no data
+                return
+            }
+
+            const parse_all = () => {
+                // Return object with all fields
+                const ret = {}
+
+                const num_fields =  msg_FMT.Format.length
+                for (let i = 0; i < num_fields; i++) {
+                    // Use correct array type for this format
+                    ret[msg_FMT.Columns[i]] = this.get_type_array(msg_FMT.Format.charAt(i), len)
+                }
+
+                // For each log message
+                for (let i = 0; i < len; i++) {
+                    this.offset = offsets[i]
+
+                    // For each field
+                    for (let j = 0; j < num_fields; j++) {
+                        ret[msg_FMT.Columns[j]][i] = this.parse_type(msg_FMT.Format.charAt(j))
+                    }
+                }
+
+                return ret
+            }
+
+            const parse_field = () => {
+                // Just return array for given field
+                const field_index = msg_FMT.Columns.indexOf(field)
+                if (field_index == -1) {
+                    // no such field
+                    return
+                }
+    
+                // Get offset of field within msg and type
+                const offset = msg_FMT.FormatOffset[field_index]
+                const type = msg_FMT.Format.charAt(field_index)
+    
+                // Read data
+                const ret = this.get_type_array(type, len)
+                for (let i = 0; i < len; i++) {
+                    this.offset = offsets[i] + offset
+                    ret[i] = this.parse_type(type)
+                }
+
+                return ret
+            }
+
+            if (field) {
+                return parse_field()
+            }
+            return parse_all()
+        }
+
+        if (instance) {
+            return parse(msg_FMT.InstancesOffsetArray[instance])
+        }
+        return parse(msg_FMT.OffsetArray)
+    }
+
+    get(name, field) {
+        return this.get_instance(name, null, field)
+    }
+
     parseAtOffset (name) {
         const msg_FMT = this.getFMT(name)
         if (msg_FMT == null) {
