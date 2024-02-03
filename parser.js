@@ -548,7 +548,7 @@ class DataflashParser {
             return parse_all()
         }
 
-        if (instance) {
+        if (instance != null) {
             return parse(msg_FMT.InstancesOffsetArray[instance])
         }
         return parse(msg_FMT.OffsetArray)
