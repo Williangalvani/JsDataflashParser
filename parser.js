@@ -846,6 +846,9 @@ class DataflashParser {
 
     processFiles () {
         this.files = {}
+        if (this.messages.FILE === undefined) {
+            return
+        }
         for (const i in this.messages.FILE.FileName) {
             const name = this.messages.FILE.FileName[i]
             const Data = this.messages.FILE.Data[i]
