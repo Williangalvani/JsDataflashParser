@@ -228,8 +228,6 @@ Math.degrees = function (radians) {
 
 class DataflashParser {
     constructor ( send_postMessage ) {
-        this.time = null
-        this.timebase = null
         this.buffer = null
         this.data = null
         this.FMT = []
@@ -425,20 +423,6 @@ class DataflashParser {
             dict[obj.Columns[i]] = this.parse_type(obj.Format.charAt(i))
         }
         return dict
-    }
-
-    gpstimetoTime (week, msec) {
-        const epoch = 86400 * (10 * 365 + (1980 - 1969) / 4 + 1 + 6 - 2)
-        return epoch + 86400 * 7 * week + msec * 0.001 - 15
-    }
-
-    setTimeBase (base) {
-        this.timebase = base
-    }
-
-    findTimeBase (gps) {
-        const temp = this.gpstimetoTime(parseInt(gps.GWk), parseInt(gps.GMS))
-        this.setTimeBase(parseInt(temp - gps.TimeUS * 0.000001))
     }
 
     getFMT (element) {
@@ -694,24 +678,6 @@ class DataflashParser {
         return availableInstances
     }
 
-    timestamp (TimeUs) {
-        const temp = this.timebase + TimeUs * 0.000001
-        if (temp > 0) {
-            TimeUs = temp
-        }
-        let date = new Date(TimeUs * 1000)
-        const hours = date.getHours()
-        const minutes = '0' + date.getMinutes()
-        const seconds = '0' + date.getSeconds()
-        const formattedTime = hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2)
-        date = date.toString()
-        const time = date.split(' ')
-        if (time[0] !== 'Invalid') {
-            this.time = time[0] + ' ' + time[1] + ' ' + time[2] + ' ' + time[3]
-        }
-        return formattedTime
-    }
-
     DfReader () {
         let lastOffset = 0
         let msg_OffsetArray = []
@@ -732,30 +698,25 @@ class DataflashParser {
 
             if (this.FMT[attribute] != null) {
                 try {
-                    const is_FMT = attribute === 128
-                    const is_GPS = this.FMT[attribute].Name === 'GPS'
-                    if (is_FMT || is_GPS) {
+                    // Load FMT messages
+                    if (attribute === 128) {
                         // Parse full message
                         const value = this.FORMAT_TO_STRUCT(this.FMT[attribute])
-                        if (is_FMT) {
-                            // Pre-calculate size of message and offsets
-                            let Size = 0
-                            let FormatOffset = new Array(value.Format.length) 
-                            for (let i = 0; i < value.Format.length; i++) {
-                                FormatOffset[i] = Size
-                                Size += this.get_size_of(value.Format.charAt(i))
-                            }
-                            this.FMT[value.Type] = {
-                                Type: value.Type,
-                                length: value.Length,
-                                Name: value.Name,
-                                Format: value.Format,
-                                Columns: value.Columns.split(','),
-                                FormatOffset,
-                                Size
-                            }
-                        } else if (is_GPS) {
-                            this.findTimeBase(value)
+                        // Pre-calculate size of message and offsets
+                        let Size = 0
+                        let FormatOffset = new Array(value.Format.length) 
+                        for (let i = 0; i < value.Format.length; i++) {
+                            FormatOffset[i] = Size
+                            Size += this.get_size_of(value.Format.charAt(i))
+                        }
+                        this.FMT[value.Type] = {
+                            Type: value.Type,
+                            length: value.Length,
+                            Name: value.Name,
+                            Format: value.Format,
+                            Columns: value.Columns.split(','),
+                            FormatOffset,
+                            Size
                         }
                     } else {
                         // Don't need to parse, advance by msg length
