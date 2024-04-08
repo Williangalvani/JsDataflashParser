@@ -842,20 +842,119 @@ class DataflashParser {
     }
 
     extractStartTime () {
-        const msgs = this.messages.GPS
-        if (msgs === undefined) {
+        if (!('GPS' in this.messageTypes)) {
+            // No GPS time, can't get timestamp
             return
         }
-        for (const i in msgs.time_boot_ms) {
-            if (msgs.GWk[i] > 1000) { // lousy validation
-                const weeks = msgs.GWk[i]
-                const ms = msgs.GMS[i]
-                let d = new Date((315964800.0 + ((60 * 60 * 24 * 7) * weeks) + ms / 1000.0) * 1000.0)
-                // adjusting for leap seconds
-                d = new Date(d.getTime() - this.leapSecondsGPS(d.getUTCFullYear(), d.getUTCMonth() + 1) * 1000)
-                return d
+        // Find the fist log message with timestamp
+        let first_time_offset
+        for (const msg of this.FMT) {
+            if (msg == null) {
+                // Invalid message type
+                continue
+            }
+
+            // Look for timestamp
+            const time_index = msg.Columns.indexOf("TimeUS")
+            if ((time_index == -1) || (msg.Format.charAt(time_index) != "Q")) {
+                // No timestamp, or unexpected format
+                continue
+            }
+
+            // Offset of timestamp within message
+            const TimeUS_offset = msg.FormatOffset[time_index]
+
+            // Helper to record first offset of time stamp
+            function update_first_offset(new_msg_offset) {
+                const time_offset = new_msg_offset + TimeUS_offset
+                if ((first_time_offset == null) || (time_offset < first_time_offset)) {
+                    first_time_offset = time_offset
+                }
+            }
+
+            // Offset of message, only check first, assume time never goes backwards
+            if ("InstancesOffsetArray" in msg) {
+                // Multiple instances
+                for (const inst of Object.values(msg.InstancesOffsetArray)) {
+                    if (inst.length > 0) {
+                        update_first_offset(inst[0])
+                    }
+                }
+
+            } else {
+                // Single instance
+                if (msg.OffsetArray.length > 0) {
+                    update_first_offset(msg.OffsetArray[0])
+                }
             }
         }
+        let start_time_us
+        if (first_time_offset != null) {
+            this.offset = first_time_offset
+            start_time_us = this.parse_type("Q")
+        }
+
+        // Helper to get the first week and ms time from GPS message
+        function get_gps_time(time, status, weeks, ms) {
+            // Must have 3D fix
+            const GPS_OK_FIX_3D = 3
+
+            const len = time.length
+            for (let i = 0; i<len; i++) {
+                if ((status[i] >= GPS_OK_FIX_3D) &&
+                    (weeks[i] > 1000) && // lousy validation
+                    (ms[i] > 0)) {
+                        return {
+                            TimeUS: time[i],
+                            weeks: weeks[i],
+                            ms: ms[i]
+                        }
+                }
+            }
+        }
+
+        // Pick the instance with the first valid time
+        let time
+        function update_first_time(new_time) {
+            if (new_time == null) {
+                return
+            }
+            if ((time == null) || (new_time.TimeUS < time.TimeUS)) {
+                time = new_time
+            }
+        }
+
+        for (const inst of Object.keys(this.messageTypes.GPS.instances)) {
+            update_first_time(get_gps_time(
+                this.get_instance("GPS", inst, "TimeUS"),
+                this.get_instance("GPS", inst, "Status"),
+                this.get_instance("GPS", inst, "GWk"),
+                this.get_instance("GPS", inst, "GMS"),
+            ))
+        }
+
+        // No valid time
+        if (time == null) {
+            return
+        }
+
+        // Calculate GPS time in seconds
+        const ms_per_week = 7 * 24 * 60 * 60 * 1000
+        const GPS_ms = (time.weeks * ms_per_week) + time.ms
+
+        // Log was started before GPS msg
+        const log_start_offset_ms = (time.TimeUS - start_time_us) * 0.001
+
+        // Convert to unix time
+        const unix_gps_offset_ms = 315964800 * 1000
+        const unix_ms = unix_gps_offset_ms + GPS_ms - log_start_offset_ms
+        let d = new Date(unix_ms)
+
+        // Get the number of GPS leap seconds
+        const leap_seconds = this.leapSecondsGPS(d.getUTCFullYear(), d.getUTCMonth() + 1)
+
+        // adjust for leap seconds
+        return  new Date(d.getTime() - (leap_seconds * 1000))
     }
 
     leapSecondsGPS (year, month) {
@@ -931,10 +1030,11 @@ class DataflashParser {
                 this.processFiles()
             }
         }
-        const metadata = {
-            startTime: this.extractStartTime()
-        }
+
         if (this.send_postMessage) {
+            const metadata = {
+                startTime: this.extractStartTime()
+            }
             self.postMessage({ metadata: metadata })
             self.postMessage({ messagesDoneLoading: true })
         }
