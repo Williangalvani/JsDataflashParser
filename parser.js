@@ -924,13 +924,27 @@ class DataflashParser {
             }
         }
 
-        for (const inst of Object.keys(this.messageTypes.GPS.instances)) {
+        if ("instances" in this.messageTypes.GPS) {
+            // Newer instance message
+            for (const inst of Object.keys(this.messageTypes.GPS.instances)) {
+                // Check each instance
+                update_first_time(get_gps_time(
+                    this.get_instance("GPS", inst, "TimeUS"),
+                    this.get_instance("GPS", inst, "Status"),
+                    this.get_instance("GPS", inst, "GWk"),
+                    this.get_instance("GPS", inst, "GMS"),
+                ))
+            }
+
+        } else {
+            // Old log before instances, just look at GPS, not GPS2
             update_first_time(get_gps_time(
-                this.get_instance("GPS", inst, "TimeUS"),
-                this.get_instance("GPS", inst, "Status"),
-                this.get_instance("GPS", inst, "GWk"),
-                this.get_instance("GPS", inst, "GMS"),
+                this.get("GPS", "TimeUS"),
+                this.get("GPS", "Status"),
+                this.get("GPS", "GWk"),
+                this.get("GPS", "GMS"),
             ))
+
         }
 
         // No valid time
