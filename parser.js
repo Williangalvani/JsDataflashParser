@@ -797,30 +797,103 @@ class DataflashParser {
         return c
     }
 
-    createUint8ArrayFromString (str) {
-        const array = new Uint8Array(str.length)
-        for (let i = 0, strLen = str.length; i < strLen; i++) {
+    createUint8ArrayFromString (str, str_len) {
+        const len = Math.min(str_len, str.length)
+        const array = new Uint8Array(len)
+        for (let i = 0; i < len; i++) {
             array[i] = str.charCodeAt(i)
         }
         return array
     }
 
-    processFiles () {
-        this.files = {}
-        if (this.messages.FILE === undefined) {
+    get_files() {
+        if (!("FILE" in this.messageTypes)) {
             return
         }
-        for (const i in this.messages.FILE.FileName) {
-            const name = this.messages.FILE.FileName[i]
-            const Data = this.messages.FILE.Data[i]
-            if (!this.files.hasOwnProperty(name)) {
-                this.files[name] = this.createUint8ArrayFromString(Data)
+        let files = {}
+        const FILE = this.get("FILE")
+        const len = FILE.FileName.length
+        for (let i = 0; i < len; i++) {
+
+            const name = FILE.FileName[i]
+            if (!files.hasOwnProperty(name)) {
+                files[name] = { offset: 0, index: 0, contents: [] }
+            }
+
+            const offset = FILE.Offset[i]
+            if (offset < files[name].offset) {
+                // Offset has gone backwards, start new file
+                files[name].index++
+                if (offset != 0) {
+                    console.warn("File: " + name + " offset gone backwards to: " + offset)
+                }
+
+            } else if (offset > files[name].offset) {
+                console.warn("File: " + name + " missing data expected offset: " + files[name].offset + ", got: " + offset)
+
+            }
+
+            const data_len = FILE.Length[i]
+            const chunk = this.createUint8ArrayFromString(FILE.Data[i], data_len)
+
+            const index = files[name].index
+            if (files[name].contents[index] == null) {
+                // New file
+                files[name].contents[index] = chunk
             } else {
-                this.files[name] = this.concatTypedArrays(
-                    this.files[name], this.createUint8ArrayFromString(Data)
-                )
+                // Add to existing
+                files[name].contents[index] = this.concatTypedArrays(files[name].contents[index], chunk)
+            }
+
+            // Update the next expected index
+            files[name].offset = offset + data_len
+        }
+
+        // Split versions of file and remove duplicates
+        let ret = {}
+        for (const [name, file] of Object.entries(files)) {
+            // Always add first version
+            ret[name] = file.contents[0]
+
+            let version = 2
+            for (let i = 1; i < file.contents.length; i++) {
+                // Only add secondary versions if different
+                if (file.contents[i].length == file.contents[i-1].length) {
+                    // Same length, check contents
+                    const len = file.contents[i].length
+                    let match = true
+                    for (let j = 0; j < len; j++) {
+                        if (file.contents[i][j] != file.contents[i-1][j]) {
+                            match = false
+                            break
+                        }
+                    }
+                    if (match) {
+                        // files are the same, no need to add a second copy
+                        continue
+                    }
+                }
+
+                // Add version number to file name
+                const version_name = "_V" + version
+                version++
+
+                let new_name
+                const point_index = name.lastIndexOf('.')
+                if (point_index > -1) {
+                    new_name = name.slice(0, point_index) + version_name + name.slice(point_index)
+                } else {
+                    new_name = name + version_name
+                }
+
+                ret[new_name] = file.contents[i]
             }
         }
+        return ret
+    }
+
+    processFiles () {
+        this.files = this.get_files()
         if (this.send_postMessage) {
             self.postMessage({ files: this.files })
         }
@@ -1039,9 +1112,10 @@ class DataflashParser {
                     'XKQ1','XKQ','NKQ1','NKQ2','XKQ2','PARM','MSG','STAT','EV']
         }
         for (const msg of msgs) {
-            this.parseAtOffset(msg)
             if (msg === 'FILE') {
                 this.processFiles()
+            } else {
+                this.parseAtOffset(msg)
             }
         }
 
