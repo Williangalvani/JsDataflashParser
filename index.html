@@ -2,7 +2,7 @@
 
 <script>
     // We use a worker because it is asynchronous, which means the ui doesn't freeze while parsing
-    const worker = new Worker('parser.js');
+    const worker = new Worker('parser.js', {type: 'module'});
 
     // output messages from worker
     worker.onmessage = (event) => {

@@ -769,21 +769,23 @@ class DataflashParser {
         let mavtype
         const msgs = this.messages.MSG
         for (const i in msgs.Message) {
-            if (msgs.Message[i].toLowerCase().includes('arduplane')) {
-                mavtype = MAV_TYPE_FIXED_WING
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('arducopter')) {
-                mavtype = MAV_TYPE_QUADROTOR
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('ardusub')) {
-                mavtype = MAV_TYPE_SUBMARINE
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('rover')) {
-                mavtype = MAV_TYPE_GROUND_ROVER
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('tracker')) {
-                mavtype = MAV_TYPE_ANTENNA_TRACKER
-                return getModeMap(mavtype)[cmode]
+            if (msgs.Message.hasOwnProperty(i)) {
+                if (msgs.Message[i].toLowerCase().includes('arduplane')) {
+                    mavtype = MAV_TYPE_FIXED_WING
+                    return getModeMap(mavtype)[cmode]
+                } else if (msgs.Message[i].toLowerCase().includes('arducopter')) {
+                    mavtype = MAV_TYPE_QUADROTOR
+                    return getModeMap(mavtype)[cmode]
+                } else if (msgs.Message[i].toLowerCase().includes('ardusub')) {
+                    mavtype = MAV_TYPE_SUBMARINE
+                    return getModeMap(mavtype)[cmode]
+                } else if (msgs.Message[i].toLowerCase().includes('rover')) {
+                    mavtype = MAV_TYPE_GROUND_ROVER
+                    return getModeMap(mavtype)[cmode]
+                } else if (msgs.Message[i].toLowerCase().includes('tracker')) {
+                    mavtype = MAV_TYPE_ANTENNA_TRACKER
+                    return getModeMap(mavtype)[cmode]
+                }
             }
         }
         console.log('defaulting to quadcopter')
@@ -811,14 +813,16 @@ class DataflashParser {
             return
         }
         for (const i in this.messages.FILE.FileName) {
-            const name = this.messages.FILE.FileName[i]
-            const Data = this.messages.FILE.Data[i]
-            if (!this.files.hasOwnProperty(name)) {
-                this.files[name] = this.createUint8ArrayFromString(Data)
-            } else {
-                this.files[name] = this.concatTypedArrays(
-                    this.files[name], this.createUint8ArrayFromString(Data)
-                )
+            if (this.messages.FILE.FileName.hasOwnProperty(i)) {
+                const name = this.messages.FILE.FileName[i]
+                const Data = this.messages.FILE.Data[i]
+                if (!this.files.hasOwnProperty(name)) {
+                    this.files[name] = this.createUint8ArrayFromString(Data)
+                } else {
+                    this.files[name] = this.concatTypedArrays(
+                        this.files[name], this.createUint8ArrayFromString(Data)
+                    )
+                }
             }
         }
         if (this.send_postMessage) {
@@ -1086,7 +1090,7 @@ self.addEventListener('message', function (event) {
     if (event.data === null) {
         console.log('got bad file message!')
     } else if (event.data.action === 'parse') {
-        parser = new DataflashParser()
+        parser = new DataflashParser(true)
         const data = event.data.file
         parser.processData(data)
     } else if (event.data.action === 'loadType') {
