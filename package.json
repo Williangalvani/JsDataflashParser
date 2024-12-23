@@ -1,0 +1,1 @@
+{"name":"js-dataflash-parser","version":"1.0.0","description":"A JavaScript parser for ArduPilot dataflash logs","main":"index.js","scripts":{"test":"echo \"Error: no test specified\" && exit 1"},"keywords":["ardupilot","dataflash","parser","logs","mavlink"],"author":"","license":"MIT","files":["index.js","parser.js"]}

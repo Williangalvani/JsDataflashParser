@@ -255,6 +255,9 @@ class DataflashParser {
         this.maxPercentageInterval = 0.05
         this.messageTypes = {}
         this.alreadyParsed = []
+        
+        // Check if we're in a web worker environment
+        this.isWebWorker = typeof self !== 'undefined' && typeof self.postMessage === 'function'
     }
 
     FORMAT_TO_STRUCT (obj) {
@@ -454,64 +457,29 @@ class DataflashParser {
     }
 
     parseAtOffset (name) {
+        if (!this.FMT) return;
+        
         const type = this.getMsgType(name)
+        if (type === undefined) return;
+        
         const parsed = []
         for (let i = 0; i < this.msgType.length; i++) {
             if (type === this.msgType[i]) {
                 this.offset = this.offsetArray[i]
                 try {
-                    const temp = this.FORMAT_TO_STRUCT(this.FMT[this.msgType[i]])
-                    if (temp.name != null) {
-                        parsed.push(this.fixData(temp))
+                    const msg = this.FORMAT_TO_STRUCT(this.FMT[type])
+                    if (msg) {
+                        parsed.push(msg)
                     }
                 } catch (e) {
-                    console.log('reached log end?')
-                    console.log(e)
+                    console.error('Error parsing message:', e)
                 }
             }
-            if (i % 100000 === 0) {
-                const perc = 100 * i / this.msgType.length
-                self.postMessage({ percentage: perc })
-            }
         }
-        delete this.messages[name]
-        this.messages[name] = parsed
-
-        self.postMessage({ percentage: 100 })
-        console.log(name, this.messageHasInstances(name) ? 'has instances' : 'has no instances')
-        if (parsed.length && this.messageHasInstances(name)) {
-            const instanceField = this.getInstancesFieldName(name)
-            const instances = {}
-            for (const msg of parsed) {
-                try {
-                    instances[msg[instanceField]].push(msg)
-                } catch (e) {
-                    instances[msg[instanceField]] = [msg]
-                }
-            }
-            if (Object.keys(instances).length === 1) {
-                this.fixDataOnce(name)
-                this.simplifyData(name)
-                this.postData({ messageType: name, messageList: this.messages[name] })
-                return parsed
-            }
-            for (const [index, messages] of Object.entries(instances)) {
-                const newName = name + '[' + index + ']'
-                this.messages[newName] = messages
-                this.fixDataOnce(newName)
-                this.simplifyData(newName)
-                this.postData({
-                    messageType: newName,
-                    messageList: this.messages[newName]
-                })
-            }
-        } else if (parsed.length) {
-            this.fixDataOnce(name)
-            this.simplifyData(name)
-            this.postData({ messageType: name, messageList: this.messages[name] })
+        
+        if (parsed.length > 0) {
+            this.messages[name] = parsed
         }
-        this.alreadyParsed.push(name)
-        return parsed
     }
 
     checkNumberOfInstances (name) {
@@ -609,12 +577,16 @@ class DataflashParser {
             }
             if (this.offset - lastOffset > 50000) {
                 const perc = 100 * this.offset / this.buffer.byteLength
-                self.postMessage({ percentage: perc })
+                if (this.isWebWorker && typeof self !== 'undefined') {
+                    self.postMessage({ action: 'progress', payload: { percentage: perc } })
+                }
                 lastOffset = this.offset
             }
         }
-        self.postMessage({ percentage: 100 })
-        self.postMessage({ messages: this.messages })
+        if (this.isWebWorker && typeof self !== 'undefined') {
+            self.postMessage({ action: 'progress', payload: { percentage: 100 } })
+            self.postMessage({ action: 'messages', payload: { messages: this.messages } })
+        }
         this.sent = true
     }
 
@@ -688,17 +660,25 @@ class DataflashParser {
     }
 
     processFiles () {
-        this.files = {}
+        this.files = {};
+        if (!this.messages.FILE || !Array.isArray(this.messages.FILE)) {
+            return;
+        }
+
         for (const msg of this.messages.FILE) {
+            if (!msg || !msg.FileName || !msg.Data) {
+                continue;
+            }
+
             if (!this.files.hasOwnProperty(msg.FileName)) {
-                this.files[msg.FileName] = this.createUint8ArrayFromString(msg.Data)
+                this.files[msg.FileName] = this.createUint8ArrayFromString(msg.Data);
             } else {
-                this.files[msg.FileName] = this.concatTypedArrays(
-                    this.files[msg.FileName], this.createUint8ArrayFromString(msg.Data)
-                )
+                const newArray = new Uint8Array(this.files[msg.FileName].length + msg.Data.length);
+                newArray.set(this.files[msg.FileName]);
+                newArray.set(this.createUint8ArrayFromString(msg.Data), this.files[msg.FileName].length);
+                this.files[msg.FileName] = newArray;
             }
         }
-        self.postMessage({ files: this.files })
     }
 
     simplifyData (name) {
@@ -738,15 +718,27 @@ class DataflashParser {
     }
 
     populateUnits () {
-        // console.log(this.messages['FMTU'])
+        if (!this.messages.FMTU || !Array.isArray(this.messages.FMTU)) {
+            return;
+        }
+
         for (const msg of this.messages.FMTU) {
-            this.FMT[msg.FmtType].units = []
-            for (const unit of msg.UnitIds) {
-                this.FMT[msg.FmtType].units.push(units[unit])
+            if (!msg || !msg.FmtType || !this.FMT[msg.FmtType]) {
+                continue;
             }
-            this.FMT[msg.FmtType].multipliers = []
-            for (const mult of msg.MultIds) {
-                this.FMT[msg.FmtType].multipliers.push(multipliers[mult])
+
+            this.FMT[msg.FmtType].units = [];
+            if (Array.isArray(msg.UnitIds)) {
+                for (const unit of msg.UnitIds) {
+                    this.FMT[msg.FmtType].units.push(units[unit] || '?');
+                }
+            }
+
+            this.FMT[msg.FmtType].multipliers = [];
+            if (Array.isArray(msg.MultIds)) {
+                for (const multiplier of msg.MultIds) {
+                    this.FMT[msg.FmtType].multipliers.push(multiplier || 1);
+                }
             }
         }
     }
@@ -787,99 +779,94 @@ class DataflashParser {
     }
 
     processData (data, msgs) {
+        if (!data || data.byteLength === 0) {
+            return {
+                messageTypes: [],
+                messages: []
+            }
+        }
+
         this.buffer = data
         this.data = new DataView(this.buffer)
         this.DfReader()
-        const messageTypes = {}
+        const messageTypes = []
+        
+        // First parse FMT messages to get message definitions
+        this.parseAtOffset('FMT')
         this.parseAtOffset('FMTU')
         this.populateUnits()
-        const typeSet = new Set(this.msgType)
+        
+        // Collect all message types from FMT messages
         for (const msg of this.FMT) {
-            if (msg) {
-                if (typeSet.has(msg.Type)) {
-                    const fields = msg.Columns.split(',')
-                    // expressions = expressions.filter(e => e !== 'TimeUS')
-                    const complexFields = {}
-                    if (msg.hasOwnProperty('units')) {
-                        for (const field in fields) {
-                            complexFields[fields[field]] = {
-                                name: fields[field],
-                                units: (multipliersTable[msg.multipliers[field]] || '') + msg.units[field],
-                                multiplier: msg.multipliers[field]
-                            }
-                        }
-                    } else {
-                        for (const field in fields) {
-                            complexFields[fields[field]] = {
-                                name: fields[field],
-                                units: '?',
-                                multiplier: 1
-                            }
-                        }
-                    }
-                    const availableInstances = this.checkNumberOfInstances(msg.Name)
-                    if (availableInstances.length > 1) {
-                        for (const instance of availableInstances) {
-                            messageTypes[msg.Name + '[' + instance + ']'] = {
-                                expressions: fields,
-                                units: msg.units,
-                                multipiers: msg.multipliers,
-                                complexFields: complexFields
-                            }
-                        }
-                    } else {
-                        messageTypes[msg.Name] = {
-                            expressions: fields,
-                            units: msg.units,
-                            multipiers: msg.multipliers,
-                            complexFields: complexFields
-                        }
-                    }
-                }
+            if (msg && msg.Name) {
+                messageTypes.push(msg.Name)
             }
         }
-        self.postMessage({ availableMessages: messageTypes })
-        this.messageTypes = messageTypes
 
-        if (msgs === null) {
-            // Default messages
-            msgs = ['CMD','MSG','FILE','MODE','AHR2','ATT','GPS','POS',
-                    'XKQ1','XKQ','NKQ1','NKQ2','XKQ2','PARM','MSG','STAT','EV']
-        }
-        for (const msg of msgs) {
+        // Default messages if msgs is null or undefined
+        const messagesToProcess = msgs || [
+            'FMT', 'CMD', 'MSG', 'FILE', 'MODE', 'AHR2', 'ATT', 'GPS', 'POS',
+            'XKQ1', 'XKQ', 'NKQ1', 'NKQ2', 'XKQ2', 'PARM', 'MSG', 'STAT', 'EV'
+        ];
+
+        // Process each message type
+        for (const msg of messagesToProcess) {
             this.parseAtOffset(msg)
             if (msg === 'FILE') {
                 this.processFiles()
             }
         }
-        const metadata = {
-            startTime: this.extractStartTime()
-        }
-        self.postMessage({ metadata: metadata })
 
-        self.postMessage({ messagesDoneLoading: true })
-        return { types: this.messageTypes, messages: this.messages }
+        // Convert messages object to array format
+        const messagesArray = []
+        for (const [type, msgs] of Object.entries(this.messages)) {
+            if (Array.isArray(msgs)) {
+                msgs.forEach(msg => {
+                    if (msg) {
+                        messagesArray.push({
+                            name: type,
+                            ...msg
+                        })
+                    }
+                })
+            }
+        }
+
+        return {
+            messageTypes: messageTypes,
+            messages: messagesArray
+        }
     }
 
     loadType (type) {
-        this.parseAtOffset(type)
-        console.log('done')
+        if (!this.messages[type]) {
+            return [];
+        }
+        return Array.isArray(this.messages[type]) ? this.messages[type] : [];
     }
 }
 
-self.addEventListener('message', function (event) {
-    let parser
-    if (event.data === null) {
-        console.log('got bad file message!')
-    } else if (event.data.action === 'parse') {
-        parser = new DataflashParser()
-        const data = event.data.file
-        parser.processData(data)
-    } else if (event.data.action === 'loadType') {
-        parser.loadType(event.data.type.split('[')[0])
-    } else if (event.data.action === 'trimFile') {
-        parser.trimFile(event.data.time)
-    }
-})
+// Setup web worker event listener only if in a web worker environment
+if (typeof self !== 'undefined' && typeof self.postMessage === 'function') {
+    self.addEventListener('message', function (event) {
+        let parser
+        if (event.data === null) {
+            console.log('got bad file message!')
+        } else if (event.data.action === 'parse') {
+            parser = new DataflashParser()
+            const data = event.data.file
+            parser.processData(data)
+        } else if (event.data.action === 'loadType') {
+            parser.loadType(event.data.type.split('[')[0])
+        } else if (event.data.action === 'trimFile') {
+            parser.trimFile(event.data.time)
+        }
+    })
+}
 
-export default DataflashParser
+// Export for Node.js environment
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        DataflashParser
+    };
+}
