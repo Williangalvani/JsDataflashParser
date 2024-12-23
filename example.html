@@ -40,7 +40,7 @@
             
             reader.onload = function(e) {
                 const parser = new DataflashParser();
-                const result = parser.processData(e.target.result);
+                const result = parser.processData(e.target.result, ['MSG']);
                 
                 // Display basic stats
                 document.getElementById('stats').innerHTML = `

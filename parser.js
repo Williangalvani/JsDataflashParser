@@ -261,122 +261,133 @@ class DataflashParser {
     }
 
     FORMAT_TO_STRUCT (obj) {
-        let temp
-        const dict = {
-            name: obj.Name,
-            fieldnames: obj.Columns.split(',')
-        }
-
-        const column = assignColumn(obj.Columns)
-        let low
-        let n
-        for (let i = 0; i < obj.Format.length; i++) {
-            temp = obj.Format.charAt(i)
-            switch (temp) {
-            case 'a': // int16_t[32]
-                dict[column[i]] = []
-                for (let j = 0; j < 32; j++) {
-                    dict[column[i]][j] = this.data.getInt16(this.offset, true)
-                    this.offset += 2
-                }
-                break
-            case 'b':
-                dict[column[i]] = this.data.getInt8(this.offset)
-                this.offset += 1
-                break
-            case 'B':
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
-            case 'h':
-                dict[column[i]] = this.data.getInt16(this.offset, true)
-                this.offset += 2
-                break
-            case 'H':
-                dict[column[i]] = this.data.getUint16(this.offset, true)
-                this.offset += 2
-                break
-            case 'i':
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                break
-            case 'I':
-                dict[column[i]] = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                break
-            case 'f':
-                dict[column[i]] = this.data.getFloat32(this.offset, true)
-                this.offset += 4
-                break
-            case 'd':
-                dict[column[i]] = this.data.getFloat64(this.offset, true)
-                this.offset += 8
-                break
-            case 'Q':
-                low = this.data.getUint32(this.offset, true)
-                this.offset += 4
-                n = this.data.getUint32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
-            case 'q':
-                low = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                n = this.data.getInt32(this.offset, true) * 4294967296.0 + low
-                if (low < 0) n += 4294967296
-                dict[column[i]] = n
-                this.offset += 4
-                break
-            case 'n':
-                // TODO: fix these regex and unsilent linter
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '')
-                this.offset += 4
-                break
-            case 'N':
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '')
-                this.offset += 16
-                break
-            case 'Z':
-                // eslint-disable-next-line
-                dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '')
-                this.offset += 64
-                break
-            case 'c':
-                // this.this.data.setInt16(offset,true);
-                dict[column[i]] = this.data.getInt16(this.offset, true) / 100
-                this.offset += 2
-                break
-            case 'C':
-                // this.data.setUint16(offset,true);
-                dict[column[i]] = this.data.getUint16(this.offset, true) / 100
-                this.offset += 2
-                break
-            case 'E':
-                // this.data.setUint32(offset,true);
-                dict[column[i]] = this.data.getUint32(this.offset, true) / 100
-                this.offset += 4
-                break
-            case 'e':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true) / 100
-                this.offset += 4
-                break
-            case 'L':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getInt32(this.offset, true)
-                this.offset += 4
-                break
-            case 'M':
-                // this.data.setInt32(offset,true);
-                dict[column[i]] = this.data.getUint8(this.offset)
-                this.offset += 1
-                break
+        try {
+            let temp
+            const dict = {
+                name: obj.Name,
+                fieldnames: obj.Columns.split(',')
             }
+
+            const column = assignColumn(obj.Columns)
+            let low
+            let n
+            for (let i = 0; i < obj.Format.length; i++) {
+                temp = obj.Format.charAt(i)
+                try {
+                    switch (temp) {
+                    case 'a': // int16_t[32]
+                        dict[column[i]] = []
+                        for (let j = 0; j < 32; j++) {
+                            dict[column[i]][j] = this.data.getInt16(this.offset, true)
+                            this.offset += 2
+                        }
+                        break
+                    case 'b':
+                        dict[column[i]] = this.data.getInt8(this.offset)
+                        this.offset += 1
+                        break
+                    case 'B':
+                        dict[column[i]] = this.data.getUint8(this.offset)
+                        this.offset += 1
+                        break
+                    case 'h':
+                        dict[column[i]] = this.data.getInt16(this.offset, true)
+                        this.offset += 2
+                        break
+                    case 'H':
+                        dict[column[i]] = this.data.getUint16(this.offset, true)
+                        this.offset += 2
+                        break
+                    case 'i':
+                        dict[column[i]] = this.data.getInt32(this.offset, true)
+                        this.offset += 4
+                        break
+                    case 'I':
+                        dict[column[i]] = this.data.getUint32(this.offset, true)
+                        this.offset += 4
+                        break
+                    case 'f':
+                        dict[column[i]] = this.data.getFloat32(this.offset, true)
+                        this.offset += 4
+                        break
+                    case 'd':
+                        dict[column[i]] = this.data.getFloat64(this.offset, true)
+                        this.offset += 8
+                        break
+                    case 'Q':
+                        low = this.data.getUint32(this.offset, true)
+                        this.offset += 4
+                        n = this.data.getUint32(this.offset, true) * 4294967296.0 + low
+                        if (low < 0) n += 4294967296
+                        dict[column[i]] = n
+                        this.offset += 4
+                        break
+                    case 'q':
+                        low = this.data.getInt32(this.offset, true)
+                        this.offset += 4
+                        n = this.data.getInt32(this.offset, true) * 4294967296.0 + low
+                        if (low < 0) n += 4294967296
+                        dict[column[i]] = n
+                        this.offset += 4
+                        break
+                    case 'n':
+                        // TODO: fix these regex and unsilent linter
+                        // eslint-disable-next-line
+                        dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 4)).replace(/\x00+$/g, '')
+                        this.offset += 4
+                        break
+                    case 'N':
+                        // eslint-disable-next-line
+                        dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 16)).replace(/\x00+$/g, '')
+                        this.offset += 16
+                        break
+                    case 'Z':
+                        // eslint-disable-next-line
+                        dict[column[i]] = String.fromCharCode.apply(null, new Uint8Array(this.buffer, this.offset, 64)).replace(/\x00+$/g, '')
+                        this.offset += 64
+                        break
+                    case 'c':
+                        // this.this.data.setInt16(offset,true);
+                        dict[column[i]] = this.data.getInt16(this.offset, true) / 100
+                        this.offset += 2
+                        break
+                    case 'C':
+                        // this.data.setUint16(offset,true);
+                        dict[column[i]] = this.data.getUint16(this.offset, true) / 100
+                        this.offset += 2
+                        break
+                    case 'E':
+                        // this.data.setUint32(offset,true);
+                        dict[column[i]] = this.data.getUint32(this.offset, true) / 100
+                        this.offset += 4
+                        break
+                    case 'e':
+                        // this.data.setInt32(offset,true);
+                        dict[column[i]] = this.data.getInt32(this.offset, true) / 100
+                        this.offset += 4
+                        break
+                    case 'L':
+                        // this.data.setInt32(offset,true);
+                        dict[column[i]] = this.data.getInt32(this.offset, true)
+                        this.offset += 4
+                        break
+                    case 'M':
+                        // this.data.setInt32(offset,true);
+                        dict[column[i]] = this.data.getUint8(this.offset)
+                        this.offset += 1
+                        break
+                    }
+                } catch (e) {
+                    console.warn(`Error parsing field ${i} of message type ${obj.Name}:`, e.message);
+                    // Set a default value based on the format type
+                    dict[column[i]] = temp.match(/[bB]/) ? 0 : (temp.match(/[fF]/) ? 0.0 : '');
+                }
+            }
+            return dict
+        } catch (e) {
+            console.error('Error in FORMAT_TO_STRUCT:', e.message);
+            return null;
         }
-        return dict
     }
 
     gpstimetoTime (week, msec) {
@@ -591,39 +602,55 @@ class DataflashParser {
     }
 
     getModeString (cmode) {
-        let mavtype
-        const msgs = this.messages.MSG
-        for (const i in msgs.Message) {
-            if (msgs.Message[i].toLowerCase().includes('arduplane')) {
-                mavtype = MAV_TYPE_FIXED_WING
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('arducopter')) {
-                mavtype = MAV_TYPE_QUADROTOR
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('ardusub')) {
-                mavtype = MAV_TYPE_SUBMARINE
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('rover')) {
-                mavtype = MAV_TYPE_GROUND_ROVER
-                return getModeMap(mavtype)[cmode]
-            } else if (msgs.Message[i].toLowerCase().includes('tracker')) {
-                mavtype = MAV_TYPE_ANTENNA_TRACKER
-                return getModeMap(mavtype)[cmode]
+        if (typeof cmode !== 'number') {
+            return 'UNKNOWN';
+        }
+
+        let mavtype = MAV_TYPE_QUADROTOR; // Default to quadcopter
+        if (this.messages.MSG) {
+            for (const msg of this.messages.MSG) {
+                if (msg && msg.Message) {
+                    const msgLower = msg.Message.toLowerCase();
+                    if (msgLower.includes('arduplane')) {
+                        mavtype = MAV_TYPE_FIXED_WING;
+                        break;
+                    } else if (msgLower.includes('arducopter')) {
+                        mavtype = MAV_TYPE_QUADROTOR;
+                        break;
+                    } else if (msgLower.includes('ardusub')) {
+                        mavtype = MAV_TYPE_SUBMARINE;
+                        break;
+                    } else if (msgLower.includes('rover')) {
+                        mavtype = MAV_TYPE_GROUND_ROVER;
+                        break;
+                    } else if (msgLower.includes('tracker')) {
+                        mavtype = MAV_TYPE_ANTENNA_TRACKER;
+                        break;
+                    }
+                }
             }
         }
-        console.log('defaulting to quadcopter')
-        return getModeMap(MAV_TYPE_QUADROTOR)[cmode]
+
+        const modeMap = getModeMap(mavtype);
+        return modeMap ? (modeMap[cmode] || 'UNKNOWN') : 'UNKNOWN';
     }
 
     fixData (message) {
-        if (message.name === 'MODE') {
-            message.asText = this.getModeString(message.Mode)
+        // Add TimeUS to time_boot_ms conversion for all messages
+        if (message.TimeUS !== undefined) {
+            message.time_boot_ms = message.TimeUS / 1000;
         }
-        // eslint-disable-next-line
-        message.time_boot_ms = message.TimeUS / 1000
-        delete message.TimeUS
-        delete message.fieldnames
-        return message
+
+        if (message.name === 'MODE') {
+            message.asText = this.getModeString(message.Mode);
+        } else if (message.name === 'GPS') {
+            // Ensure GPS fields are properly named
+            if (message.Lat !== undefined) message.Lat = message.Lat / 1e7; // Convert to degrees
+            if (message.Lng !== undefined) message.Lng = message.Lng / 1e7; // Convert to degrees
+            if (message.Alt !== undefined) message.Alt = message.Alt / 100; // Convert to meters
+        }
+
+        return message;
     }
 
     fixDataOnce (name) {
@@ -786,55 +813,74 @@ class DataflashParser {
             }
         }
 
-        this.buffer = data
-        this.data = new DataView(this.buffer)
-        this.DfReader()
-        const messageTypes = []
-        
-        // First parse FMT messages to get message definitions
-        this.parseAtOffset('FMT')
-        this.parseAtOffset('FMTU')
-        this.populateUnits()
-        
-        // Collect all message types from FMT messages
-        for (const msg of this.FMT) {
-            if (msg && msg.Name) {
-                messageTypes.push(msg.Name)
+        try {
+            this.buffer = data
+            this.data = new DataView(this.buffer)
+            this.DfReader()
+            const messageTypes = []
+            
+            // First parse FMT messages to get message definitions
+            this.parseAtOffset('FMT')
+            this.parseAtOffset('FMTU')
+            this.populateUnits()
+            
+            // Collect all message types from FMT messages
+            for (const msg of this.FMT) {
+                if (msg && msg.Name) {
+                    messageTypes.push(msg.Name)
+                }
             }
-        }
 
-        // Default messages if msgs is null or undefined
-        const messagesToProcess = msgs || [
-            'FMT', 'CMD', 'MSG', 'FILE', 'MODE', 'AHR2', 'ATT', 'GPS', 'POS',
-            'XKQ1', 'XKQ', 'NKQ1', 'NKQ2', 'XKQ2', 'PARM', 'MSG', 'STAT', 'EV'
-        ];
+            // Process MSG messages first to determine vehicle type
+            this.parseAtOffset('MSG')
 
-        // Process each message type
-        for (const msg of messagesToProcess) {
-            this.parseAtOffset(msg)
-            if (msg === 'FILE') {
-                this.processFiles()
+            // Default messages if msgs is null or undefined
+            const messagesToProcess = msgs || messageTypes;
+
+            // Process each message type
+            for (const msg of messagesToProcess) {
+                if (msg !== 'MSG') { // Skip MSG as we've already processed it
+                    this.parseAtOffset(msg)
+                }
+                if (msg === 'FILE') {
+                    this.processFiles()
+                }
             }
-        }
 
-        // Convert messages object to array format
-        const messagesArray = []
-        for (const [type, msgs] of Object.entries(this.messages)) {
-            if (Array.isArray(msgs)) {
-                msgs.forEach(msg => {
-                    if (msg) {
-                        messagesArray.push({
-                            name: type,
-                            ...msg
-                        })
-                    }
-                })
+            // Convert messages object to array format and fix data
+            const messagesArray = []
+            for (const [type, msgs] of Object.entries(this.messages)) {
+                if (Array.isArray(msgs)) {
+                    msgs.forEach(msg => {
+                        if (msg) {
+                            const fixedMsg = this.fixData({...msg, name: type});
+                            if (fixedMsg.time_boot_ms === undefined && fixedMsg.TimeUS !== undefined) {
+                                fixedMsg.time_boot_ms = fixedMsg.TimeUS / 1000;
+                            }
+                            messagesArray.push(fixedMsg);
+                        }
+                    })
+                }
             }
-        }
 
-        return {
-            messageTypes: messageTypes,
-            messages: messagesArray
+            // Sort messages by timestamp
+            messagesArray.sort((a, b) => {
+                const timeA = a.time_boot_ms || 0;
+                const timeB = b.time_boot_ms || 0;
+                return timeA - timeB;
+            });
+
+            return {
+                messageTypes: messageTypes,
+                messages: messagesArray
+            }
+        } catch (e) {
+            console.error('Error processing data:', e);
+            return {
+                messageTypes: [],
+                messages: [],
+                error: e.message
+            }
         }
     }
 
