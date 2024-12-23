@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dataflash Parser Example</title>
+    <style>
+        .message-list {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 10px;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .message {
+            margin: 5px 0;
+            padding: 5px;
+            background: #f5f5f5;
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dataflash Parser Example</h1>
+    <input type="file" id="logFile" accept=".BIN,.bin">
+    
+    <div id="stats"></div>
+    <div class="message-list">
+        <h2>System Messages (MSG)</h2>
+        <div id="messages"></div>
+    </div>
+    <pre id="output"></pre>
+
+    <script src="dist/dataflash-parser.js"></script>
+    <script>
+        document.getElementById('logFile').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const parser = new DataflashParser();
+                const result = parser.processData(e.target.result);
+                
+                // Display basic stats
+                document.getElementById('stats').innerHTML = `
+                    <h3>Log Statistics</h3>
+                    <p>Total messages: ${result.messages.length}</p>
+                    <p>Message types: ${result.messageTypes.length}</p>
+                `;
+
+                // Find and display all MSG messages
+                const msgMessages = result.messages.filter(msg => msg.name === 'MSG');
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML = ''; // Clear previous messages
+
+                if (msgMessages.length > 0) {
+                    msgMessages.forEach((msg, index) => {
+                        const messageDiv = document.createElement('div');
+                        messageDiv.className = 'message';
+                        
+                        // Format timestamp if available
+                        const timestamp = msg.time_boot_ms ? new Date(msg.time_boot_ms).toISOString() : 'N/A';
+                        
+                        messageDiv.innerHTML = `
+                            <strong>Message ${index + 1}</strong> (Time: ${timestamp})<br>
+                            ${msg.Message || 'No message content'}
+                        `;
+                        messagesDiv.appendChild(messageDiv);
+                    });
+                } else {
+                    messagesDiv.innerHTML = '<p>No MSG messages found in the log.</p>';
+                }
+
+                // Display all message types for reference
+                document.getElementById('output').textContent = 
+                    `Available message types:\n${JSON.stringify(result.messageTypes, null, 2)}`;
+            };
+            
+            reader.readAsArrayBuffer(file);
+        });
+    </script>
+</body>
+</html> 
