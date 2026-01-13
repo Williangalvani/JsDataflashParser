@@ -462,6 +462,15 @@ class DataflashParser {
 
     // Log name, optional instance name, optional field
     get_instance(name, instance, field) {
+        // Handle legacy MAG format
+        if (name === "MAG" && instance != null) {
+            const legacyName = this.getLegacyMAGName(instance)
+            if (legacyName) {
+                // Redirect to legacy message name
+                return this.get_instance(legacyName, null, field)
+            }
+        }
+
         // Read and return array for given log field, this will not be stored locally
         const msg_FMT = this.getFMT(name)
         if (msg_FMT == null) {
@@ -676,6 +685,58 @@ class DataflashParser {
         delete msg.OffsetArray
 
         return availableInstances
+    }
+
+    createLegacyMAGInstances (messageTypes) {
+        // Check for legacy MAG format where instance numbers are in message names (MAG, MAG2, MAG3)
+        // instead of being in an "I" field
+        
+        const magMessages = []
+        const legacyMAGPattern = /^MAG(\d*)$/
+        
+        // Find all MAG-related messages
+        for (const msgName in messageTypes) {
+            if (legacyMAGPattern.test(msgName)) {
+                const match = msgName.match(legacyMAGPattern)
+                const instanceNum = match[1] === '' ? 0 : parseInt(match[1]) - 1 // MAG=0, MAG2=1, MAG3=2
+                magMessages.push({
+                    name: msgName,
+                    instance: instanceNum
+                })
+            }
+        }
+        
+        // If we found legacy MAG messages and no modern MAG instances, create the instances structure
+        if (magMessages.length > 0 && !messageTypes.MAG?.instances) {
+            // Update MAG to have instances structure if it doesn't already
+            if (messageTypes.MAG) {
+                messageTypes.MAG.instances = {}
+                
+                // Create instances entries for each legacy MAG message
+                for (const magMsg of magMessages) {
+                    messageTypes.MAG.instances[magMsg.instance] = `MAG[${magMsg.instance}]`
+                    
+                    // Create the MAG[X] message type pointing to the legacy message
+                    messageTypes[`MAG[${magMsg.instance}]`] = {
+                        ...messageTypes[magMsg.name],
+                        legacyName: magMsg.name // Store reference to original message name
+                    }
+                }
+            }
+        }
+    }
+
+    getLegacyMAGName(instance) {
+        // Convert instance number to legacy MAG message name
+        // 0 -> MAG, 1 -> MAG2, 2 -> MAG3
+        if (instance === 0) {
+            return this.getFMT("MAG") ? "MAG" : null
+        } else if (instance === 1) {
+            return this.getFMT("MAG2") ? "MAG2" : null
+        } else if (instance === 2) {
+            return this.getFMT("MAG3") ? "MAG3" : null
+        }
+        return null
     }
 
     DfReader () {
@@ -1037,6 +1098,10 @@ class DataflashParser {
                 }
             }
         }
+        
+        // Handle legacy MAG format (MAG, MAG2, MAG3) by creating instances structure
+        this.createLegacyMAGInstances(messageTypes)
+        
         if (this.send_postMessage) {
             self.postMessage({ availableMessages: messageTypes })
         }
@@ -1105,4 +1170,12 @@ self.addEventListener('message', function (event) {
     }
 })
 
-export default DataflashParser
+// Make available as global for traditional script loading
+if (typeof window !== 'undefined') {
+    window.DataflashParser = DataflashParser
+}
+
+// Export for node/module environments if needed
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = DataflashParser
+}
