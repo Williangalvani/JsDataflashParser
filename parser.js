@@ -266,6 +266,7 @@ class DataflashParser {
             case 'L': // Int32
             case 'I': // Uint32
             case 'f': // Float32
+            case 'g': // Float16
             case 'd': // Float64
             case 'Q': // Uint64
             case 'q': // Int64
@@ -317,6 +318,22 @@ class DataflashParser {
                 ret = this.data.getFloat32(this.offset, true)
                 this.offset += 4
                 break
+            case 'g': {
+                // IEEE 754 half-precision
+                const half = this.data.getUint16(this.offset, true)
+                const sign = (half & 0x8000) ? -1 : 1
+                const exponent = (half >> 10) & 0x1F
+                const fraction = half & 0x3FF
+                if (exponent === 0) {
+                    ret = sign * fraction * Math.pow(2, -24)
+                } else if (exponent === 0x1F) {
+                    ret = fraction ? NaN : sign * Infinity
+                } else {
+                    ret = sign * (1 + fraction / 1024) * Math.pow(2, exponent - 15)
+                }
+                this.offset += 2
+                break
+            }
             case 'd':
                 ret = this.data.getFloat64(this.offset, true)
                 this.offset += 8
@@ -398,6 +415,7 @@ class DataflashParser {
             case 'H': // Uint16
             case 'c': // Int16 * 100
             case 'C': // Uint16 * 100
+            case 'g': // Float16
                 return 2
             case 'i': // Int32
             case 'I': // Uint32
